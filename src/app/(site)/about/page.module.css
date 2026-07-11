@@ -1,0 +1,211 @@
+.page {
+  overflow-x: clip;
+}
+
+/* Intro */
+.intro {
+  padding: 84px 0 40px;
+  background: transparent;
+}
+
+.introInner {
+  max-width: 820px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--orange-d);
+  background: rgba(83, 74, 183, 0.12);
+  padding: 6px 14px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+
+.introInner h2 {
+  font-size: clamp(1.9rem, 3.5vw, 2.6rem);
+  color: var(--navy);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.15;
+  margin-bottom: 18px;
+}
+
+.introInner h2 .accent {
+  background: var(--grad-warm);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.introInner p {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.8;
+}
+
+/* Values grid */
+.values {
+  padding: 60px 0 90px;
+  background: transparent;
+}
+
+.valuesGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 26px;
+}
+
+.valueCard {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 32px 28px;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.valueCard::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: var(--grad-warm);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.35s ease;
+}
+
+.valueCard:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 24px 44px rgba(83, 74, 183, 0.12);
+  border-color: transparent;
+}
+
+.valueCard:hover::before {
+  transform: scaleX(1);
+}
+
+.valueIcon {
+  width: 58px;
+  height: 58px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 20px;
+  font-size: 22px;
+  color: white;
+  background: var(--grad-navy);
+  transition: transform 0.3s ease, background 0.3s ease;
+}
+
+.valueCard:hover .valueIcon {
+  transform: scale(1.08) rotate(-4deg);
+  background: var(--grad-warm);
+}
+
+.valueCard h3 {
+  color: var(--navy);
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.valueCard p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/* Quote band */
+.quoteBand {
+  padding: 0 0 90px;
+}
+
+.quoteInner {
+  position: relative;
+  overflow: hidden;
+  border-radius: 28px;
+  background: var(--grad-navy);
+  padding: 64px 56px;
+  text-align: center;
+  box-shadow: 0 30px 60px rgba(83, 74, 183, 0.22);
+}
+
+.quoteInner::before {
+  content: "\201C";
+  position: absolute;
+  top: 10px;
+  left: 40px;
+  font-family: Georgia, serif;
+  font-size: 120px;
+  color: rgba(83, 74, 183, 0.25);
+  line-height: 1;
+}
+
+.quoteInner p {
+  position: relative;
+  color: white;
+  font-size: clamp(1.3rem, 2.6vw, 1.8rem);
+  font-weight: 500;
+  line-height: 1.6;
+  max-width: 820px;
+  margin: 0 auto;
+  font-style: italic;
+}
+
+/* Final CTA */
+.finalCta {
+  padding: 0 0 100px;
+}
+
+.finalInner {
+  text-align: center;
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.finalInner h2 {
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  color: var(--navy);
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+}
+
+.finalInner p {
+  color: var(--muted);
+  font-size: 17px;
+  line-height: 1.7;
+  margin-bottom: 32px;
+}
+
+.finalActions {
+  display: flex;
+  gap: 16px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .valuesGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .valuesGrid {
+    grid-template-columns: 1fr;
+  }
+  .quoteInner {
+    padding: 48px 28px;
+  }
+}

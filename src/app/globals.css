@@ -1,0 +1,132 @@
+/* Design tokens shared across every page */
+:root {
+  /* ===== Source palette (course-marketplace inspired: soft violet / rose /
+     teal on a lilac off-white). Change a value here and it propagates
+     everywhere via the legacy aliases below. ===== */
+  --primary: #534ab7; /* purple: buttons, active nav, links — the one accent */
+  --primary-hover: #6a5fd0;
+  --accent: #534ab7; /* same hue — no separate pink accent */
+  --accent-dark: #453c9e;
+  --success: #1d9e75; /* small success / progress touches */
+  --text: #1c1d1f; /* near-black text + headings */
+  --text-secondary: #6a6f73; /* neutral gray */
+  --bg: #ffffff; /* clean white background */
+  --surface: #ffffff; /* cards / panels */
+  --border: #d8dce0; /* light gray border */
+
+  /* ===== Legacy aliases — map the old token names onto the new palette so
+     existing components keep working with zero structural changes. ===== */
+  --navy: var(--text); /* headings / dark structural */
+  --navy-d: #000000;
+  --orange: var(--accent);
+  --orange-d: var(--accent-dark);
+  --coral: var(--primary); /* primary CTA */
+  --coral-d: var(--primary-hover);
+  --teal: var(--success);
+  --ink: var(--text);
+  --muted: var(--text-secondary);
+  --bg-soft: #f6f7f9; /* light gray section-alt */
+  --bg-page: var(--bg);
+  --line: var(--border);
+  --grad-warm: linear-gradient(135deg, #6f63d6 0%, #534ab7 100%); /* purple accent */
+  --grad-navy: linear-gradient(135deg, #303236 0%, #1c1d1f 100%); /* neutral dark banners */
+}
+
+/* Reset and Base Styles (global primitives shared across every page) */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Poppins", sans-serif;
+  color: var(--muted);
+  background-color: var(--bg-page);
+  background-image: radial-gradient(rgba(83, 74, 183, 0.17) 1.3px, transparent 1.3px);
+  background-size: 24px 24px;
+  line-height: 1.6;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+ul {
+  list-style: none;
+}
+
+img {
+  max-width: 100%;
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Button Styles */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border-radius: 16px;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+  transition: transform 0.25s ease, box-shadow 0.25s ease,
+    background-color 0.25s ease;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+}
+
+.btn-primary {
+  background-color: var(--coral);
+  color: white;
+  box-shadow: 0 10px 22px rgba(83, 74, 183, 0.28);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  background-color: var(--coral-d);
+  box-shadow: 0 14px 28px rgba(83, 74, 183, 0.38);
+}
+
+.btn-secondary {
+  background-color: var(--navy);
+  color: white;
+  box-shadow: 0 10px 22px rgba(83, 74, 183, 0.2);
+}
+
+.btn-secondary:hover {
+  transform: translateY(-2px);
+  background-color: var(--navy-d);
+  box-shadow: 0 14px 28px rgba(83, 74, 183, 0.3);
+}
+
+/* Scroll-reveal utility (toggled by the <Reveal/> component) */
+.reveal {
+  opacity: 0;
+  transform: translateY(36px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

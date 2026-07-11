@@ -1,0 +1,162 @@
+.wrap {
+  background: transparent;
+  padding: 84px 0 90px;
+}
+
+.searchFilters {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 26px;
+  margin-bottom: 30px;
+  box-shadow: 0 14px 34px rgba(83, 74, 183, 0.08);
+}
+
+.searchFilters h3 {
+  color: var(--navy);
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchFilters h3 i {
+  color: var(--orange-d);
+}
+
+.filterRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.filterGroup label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--navy);
+  font-size: 13px;
+}
+
+.filterGroup input,
+.filterGroup select {
+  width: 100%;
+  padding: 11px 15px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  font-family: "Poppins", sans-serif;
+  font-size: 14px;
+  background: #f8fafc;
+  transition: all 0.25s ease;
+}
+
+.filterGroup input:focus,
+.filterGroup select:focus {
+  outline: none;
+  border-color: var(--navy);
+  box-shadow: 0 0 0 4px rgba(83, 74, 183, 0.08);
+  background: white;
+}
+
+.filterActions {
+  display: flex;
+  gap: 12px;
+  margin-top: 6px;
+}
+
+.tableContainer {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 14px 34px rgba(83, 74, 183, 0.06);
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+}
+
+.table th {
+  background: var(--grad-navy);
+  color: white;
+  padding: 15px 18px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.table th:first-child {
+  border-top-left-radius: 12px;
+  border-bottom-left-radius: 12px;
+}
+
+.table th:last-child {
+  border-top-right-radius: 12px;
+  border-bottom-right-radius: 12px;
+}
+
+.table td {
+  padding: 15px 18px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.priceCell {
+  color: var(--orange-d);
+  font-weight: 700;
+}
+
+.actionCell {
+  display: flex;
+  gap: 8px;
+}
+
+.actionBtn {
+  padding: 7px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  color: white;
+}
+
+.actionBtn:hover {
+  transform: translateY(-2px);
+}
+
+.viewBtn {
+  background: var(--navy);
+}
+
+.editBtn {
+  background-image: var(--grad-warm);
+}
+
+.deleteBtn {
+  background: #ef4444;
+}
+
+@media (max-width: 560px) {
+  .filterActions {
+    flex-direction: column;
+  }
+}
