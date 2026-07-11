@@ -123,6 +123,9 @@ export default function MentorsClient({
                   <div className={styles.cardTop}>
                     <div className={styles.avatar}>
                       <img src={mentor.profilePicture} alt={mentor.name} />
+                      <span className={styles.verified} title="Verified mentor">
+                        <i className="fa fa-check"></i>
+                      </span>
                     </div>
                   </div>
                   <div className={styles.cardBody}>
@@ -177,6 +180,37 @@ export default function MentorsClient({
               ))}
             </div>
           )}
+
+          {/* Why learn with our mentors */}
+          <section className={styles.why}>
+            <div className={styles.whyHead}>
+              <h2>{t("mentorsPage.whyTitle")}</h2>
+              <p>{t("mentorsPage.whySubtitle")}</p>
+            </div>
+            <div className={styles.whyGrid}>
+              <div className={styles.whyCard}>
+                <div className={styles.whyIcon}>
+                  <i className="fa fa-check-circle"></i>
+                </div>
+                <h3>{t("mentorsPage.why1t")}</h3>
+                <p>{t("mentorsPage.why1d")}</p>
+              </div>
+              <div className={styles.whyCard}>
+                <div className={styles.whyIcon}>
+                  <i className="fa fa-users"></i>
+                </div>
+                <h3>{t("mentorsPage.why2t")}</h3>
+                <p>{t("mentorsPage.why2d")}</p>
+              </div>
+              <div className={styles.whyCard}>
+                <div className={styles.whyIcon}>
+                  <i className="fa fa-clock-o"></i>
+                </div>
+                <h3>{t("mentorsPage.why3t")}</h3>
+                <p>{t("mentorsPage.why3d")}</p>
+              </div>
+            </div>
+          </section>
         </div>
       </div>
     </>
