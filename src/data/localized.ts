@@ -60,6 +60,16 @@ const DICT: Record<string, Tr> = {
   "Web Development Basics": { fr: "Bases du développement web", ar: "أساسيات تطوير الويب" },
   "Principles of Economics": { fr: "Principes d'économie", ar: "مبادئ الاقتصاد" },
 
+  // ---- Algerian-curriculum subjects ----
+  "French Language": { fr: "Langue française", ar: "اللغة الفرنسية" },
+  "Natural Sciences": { fr: "Sciences naturelles", ar: "العلوم الطبيعية" },
+  "History & Geography": { fr: "Histoire-Géographie", ar: "التاريخ والجغرافيا" },
+  "Technology": { fr: "Technologie", ar: "التكنولوجيا" },
+  "Economics & Management": { fr: "Économie et gestion", ar: "الاقتصاد والتسيير" },
+  "Accounting": { fr: "Comptabilité", ar: "المحاسبة" },
+  "Philosophy": { fr: "Philosophie", ar: "الفلسفة" },
+  "Foreign Languages": { fr: "Langues étrangères", ar: "اللغات الأجنبية" },
+
   // ---- Mentor professional titles ----
   "Senior Mathematics Instructor": { fr: "Enseignante senior de mathématiques", ar: "مدرّسة رياضيات أولى" },
   "Physics Mentor & Lab Specialist": { fr: "Mentor en physique et spécialiste de laboratoire", ar: "مُوجّه فيزياء وأخصائي مختبر" },

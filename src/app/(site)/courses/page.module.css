@@ -34,8 +34,93 @@
 
 .tierGrid {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 14px;
+}
+
+/* ===== Year / stream selector ===== */
+.trackBar {
+  margin-top: 22px;
+}
+
+.trackHeading {
+  color: var(--navy);
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.trackChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trackChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-family: "Poppins", sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--navy);
+  background: white;
+  border: 1.5px solid var(--line);
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.trackChip b {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.trackChip:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.trackChipActive {
+  background: var(--primary);
+  border-color: transparent;
+  color: white;
+  box-shadow: 0 10px 20px rgba(83, 74, 183, 0.25);
+}
+
+.trackChipActive b {
+  color: white;
+}
+
+.examTag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  background: rgba(29, 158, 117, 0.15);
+  color: #157a5b;
+}
+
+.trackChipActive .examTag {
+  background: rgba(255, 255, 255, 0.22);
+  color: white;
+}
+
+/* exam badge on the course thumbnail */
+.examBadge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: white;
+  background: #1d9e75;
+  box-shadow: 0 6px 14px rgba(29, 158, 117, 0.4);
 }
 
 .tierCard {
@@ -48,6 +133,8 @@
   border: 1.5px solid var(--line);
   background: white;
   text-align: center;
+  font-family: "Poppins", sans-serif;
+  cursor: pointer;
   transition: transform 0.25s ease, border-color 0.25s ease, background 0.25s ease;
 }
 
@@ -191,6 +278,19 @@
   transition: transform 0.3s ease, box-shadow 0.3s ease;
   display: flex;
   flex-direction: column;
+  animation: courseFade 0.35s ease backwards;
+}
+
+/* plays whenever the grid is re-keyed (level / year / page change) */
+@keyframes courseFade {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card:hover {
@@ -362,7 +462,8 @@
   gap: 10px;
 }
 
-.pagination a {
+.pagination a,
+.pagination button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -373,16 +474,21 @@
   background: white;
   border: 1px solid var(--line);
   color: var(--navy);
+  font-family: "Poppins", sans-serif;
+  font-size: 15px;
   font-weight: 600;
+  cursor: pointer;
   transition: all 0.25s ease;
 }
 
-.pagination a:hover {
+.pagination a:hover,
+.pagination button:hover {
   border-color: var(--navy);
   transform: translateY(-2px);
 }
 
-.pagination a.active {
+.pagination a.active,
+.pagination button.active {
   background: var(--grad-navy);
   color: white;
   border-color: transparent;

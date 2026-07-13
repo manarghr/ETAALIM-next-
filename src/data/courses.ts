@@ -1,17 +1,25 @@
 import { mentors } from "./mentors";
 
+// Algerian education system model.
+// Cycle (tier) → Track (a school year, or a high-school stream) → Courses.
 export type Tier = "Primary" | "Middle" | "High School" | "University";
 export type CourseStatus = "available" | "upcoming";
 
 export interface Course {
   id: number;
   subject: string;
-  date: string; // ISO date
-  time: string; // HH:MM (24h)
+  /** education cycle */
+  tier: Tier;
+  /** sub-level key: a school year (p1..p5, m1..m4) or a HS stream / uni cycle */
+  track: string;
+  /** grade number inside the cycle (1..5 primary, 1..4 middle, 1..3 HS, uni years) */
+  year: number;
+  /** subject field — drives accent + generated lessons + mentor match */
   major: string;
   level: string;
-  tier: Tier;
   status: CourseStatus;
+  date: string; // ISO date
+  time: string; // HH:MM (24h)
   /** self-paced recorded course price (DZD) */
   price: number;
   /** online group revision session price (DZD) */
@@ -21,25 +29,183 @@ export interface Course {
   mentorId: number;
 }
 
-// Demo courses — prices in Algerian Dinar (DZD). Replace with a real API later.
-export const courses: Course[] = [
-  { id: 1,  subject: "Arabic Language",          date: "2025-09-15", time: "10:00", major: "Arabic",           level: "Beginner",     tier: "Primary",     status: "available", price: 1200, priceGroup: 2500, priceIndividual: 5000, mentorId: 6 },
-  { id: 2,  subject: "Primary Mathematics",      date: "2025-09-18", time: "11:00", major: "Mathematics",      level: "Beginner",     tier: "Primary",     status: "available", price: 1200, priceGroup: 2500, priceIndividual: 5000, mentorId: 1 },
-  { id: 3,  subject: "Beginner French",          date: "2025-09-20", time: "14:00", major: "French",           level: "Beginner",     tier: "Primary",     status: "upcoming",  price: 1300, priceGroup: 2600, priceIndividual: 5200, mentorId: 7 },
-  { id: 4,  subject: "Middle-School Mathematics",date: "2025-09-22", time: "09:30", major: "Mathematics",      level: "Intermediate", tier: "Middle",      status: "available", price: 1600, priceGroup: 3000, priceIndividual: 6000, mentorId: 1 },
-  { id: 5,  subject: "General Science (BEM)",     date: "2025-09-25", time: "16:00", major: "Physics",          level: "Intermediate", tier: "Middle",      status: "available", price: 1600, priceGroup: 3000, priceIndividual: 6000, mentorId: 2 },
-  { id: 6,  subject: "English for Middle School", date: "2025-10-01", time: "17:00", major: "English",          level: "Intermediate", tier: "Middle",      status: "upcoming",  price: 1500, priceGroup: 2800, priceIndividual: 5600, mentorId: 6 },
-  { id: 7,  subject: "Algebra & Analysis (BAC)",  date: "2025-10-03", time: "10:00", major: "Mathematics",      level: "Advanced",     tier: "High School", status: "available", price: 2200, priceGroup: 4000, priceIndividual: 8000, mentorId: 1 },
-  { id: 8,  subject: "Classical Mechanics",       date: "2025-10-05", time: "09:30", major: "Physics",          level: "Advanced",     tier: "High School", status: "available", price: 2200, priceGroup: 4000, priceIndividual: 8000, mentorId: 2 },
-  { id: 9,  subject: "Organic Chemistry (BAC)",   date: "2025-10-08", time: "13:00", major: "Chemistry",        level: "Advanced",     tier: "High School", status: "upcoming",  price: 2300, priceGroup: 4200, priceIndividual: 8400, mentorId: 4 },
-  { id: 10, subject: "Cell Biology (BAC)",        date: "2025-10-10", time: "15:30", major: "Biology",          level: "Advanced",     tier: "High School", status: "available", price: 2200, priceGroup: 4000, priceIndividual: 8000, mentorId: 5 },
-  { id: 11, subject: "Calculus I",                date: "2025-10-12", time: "14:00", major: "Mathematics",      level: "Intermediate", tier: "University",  status: "available", price: 2800, priceGroup: 5000, priceIndividual: 10000, mentorId: 1 },
-  { id: 12, subject: "Intro to Python",           date: "2025-10-15", time: "16:00", major: "Computer Science", level: "Beginner",     tier: "University",  status: "available", price: 2800, priceGroup: 5000, priceIndividual: 10000, mentorId: 3 },
-  { id: 13, subject: "Web Development Basics",     date: "2025-10-18", time: "11:00", major: "Computer Science", level: "Beginner",     tier: "University",  status: "upcoming",  price: 3000, priceGroup: 5500, priceIndividual: 11000, mentorId: 3 },
-  { id: 14, subject: "Principles of Economics",   date: "2025-10-20", time: "13:00", major: "Economics",        level: "Intermediate", tier: "University",  status: "available", price: 2900, priceGroup: 5200, priceIndividual: 10500, mentorId: 8 },
+export const TIERS: Tier[] = ["Primary", "Middle", "High School", "University"];
+
+// ===== Tracks (the second level of the drill-down) =====
+export interface Track {
+  key: string;
+  tier: Tier;
+  /** Algerian short code shown on the chip (e.g. "5AP", "4AM", "3AS") */
+  code: string;
+  /** true for the exam year (4AM → BEM, 3AS → BAC) */
+  exam?: "BEM" | "BAC";
+}
+
+export const TRACKS: Track[] = [
+  // Primary — 5 years
+  { key: "p1", tier: "Primary", code: "1AP" },
+  { key: "p2", tier: "Primary", code: "2AP" },
+  { key: "p3", tier: "Primary", code: "3AP" },
+  { key: "p4", tier: "Primary", code: "4AP" },
+  { key: "p5", tier: "Primary", code: "5AP" },
+  // Middle (CEM) — 4 years, 4AM → BEM
+  { key: "m1", tier: "Middle", code: "1AM" },
+  { key: "m2", tier: "Middle", code: "2AM" },
+  { key: "m3", tier: "Middle", code: "3AM" },
+  { key: "m4", tier: "Middle", code: "4AM", exam: "BEM" },
+  // High school — 1AS common cores + 2AS/3AS streams, 3AS → BAC
+  { key: "hs_tc_sci", tier: "High School", code: "1AS" },
+  { key: "hs_tc_let", tier: "High School", code: "1AS" },
+  { key: "hs_exp", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  { key: "hs_math", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  { key: "hs_tech", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  { key: "hs_gest", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  { key: "hs_philo", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  { key: "hs_lang", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  // University (LMD)
+  { key: "uni_lic", tier: "University", code: "Licence" },
+  { key: "uni_mas", tier: "University", code: "Master" },
+  { key: "uni_doc", tier: "University", code: "Doctorat" },
 ];
 
-export const TIERS: Tier[] = ["Primary", "Middle", "High School", "University"];
+export function tracksForTier(tier: Tier): Track[] {
+  return TRACKS.filter((t) => t.tier === tier);
+}
+
+export function getTrack(key: string): Track | undefined {
+  return TRACKS.find((t) => t.key === key);
+}
+
+// ===== Course list (Algerian curriculum) =====
+const PRICE: Record<Tier, [number, number, number]> = {
+  Primary: [1200, 2500, 5000],
+  Middle: [1600, 3000, 6000],
+  "High School": [2200, 4000, 8000],
+  University: [2800, 5000, 10000],
+};
+
+const LEVEL_BY_TIER: Record<Tier, string> = {
+  Primary: "Beginner",
+  Middle: "Intermediate",
+  "High School": "Advanced",
+  University: "Advanced",
+};
+
+const MENTOR_BY_MAJOR: Record<string, number> = {
+  Mathematics: 1,
+  Physics: 2,
+  Technology: 2,
+  "Computer Science": 3,
+  Chemistry: 4,
+  Biology: 5,
+  "Natural Sciences": 5,
+  English: 6,
+  "Foreign Languages": 6,
+  French: 7,
+  Economics: 8,
+  Accounting: 8,
+  History: 9,
+  Philosophy: 9,
+  Arabic: 9,
+};
+
+const DATES = ["2025-09-15", "2025-09-22", "2025-10-01", "2025-10-08", "2025-10-15", "2025-10-22"];
+const TIMES = ["09:00", "10:30", "14:00", "16:00", "11:00"];
+
+let _id = 0;
+function mk(subject: string, tier: Tier, track: string, year: number, major: string): Course {
+  _id += 1;
+  const [price, priceGroup, priceIndividual] = PRICE[tier];
+  return {
+    id: _id,
+    subject,
+    tier,
+    track,
+    year,
+    major,
+    level: LEVEL_BY_TIER[tier],
+    status: _id % 6 === 0 ? "upcoming" : "available",
+    date: DATES[_id % DATES.length],
+    time: TIMES[_id % TIMES.length],
+    price,
+    priceGroup,
+    priceIndividual,
+    mentorId: MENTOR_BY_MAJOR[major] ?? 1,
+  };
+}
+
+export const courses: Course[] = [
+  // ===== Primary =====
+  mk("Arabic Language", "Primary", "p1", 1, "Arabic"),
+  mk("Mathematics", "Primary", "p1", 1, "Mathematics"),
+  mk("Arabic Language", "Primary", "p2", 2, "Arabic"),
+  mk("Mathematics", "Primary", "p2", 2, "Mathematics"),
+  mk("Arabic Language", "Primary", "p3", 3, "Arabic"),
+  mk("Mathematics", "Primary", "p3", 3, "Mathematics"),
+  mk("French Language", "Primary", "p3", 3, "French"),
+  mk("Mathematics", "Primary", "p4", 4, "Mathematics"),
+  mk("French Language", "Primary", "p4", 4, "French"),
+  mk("English", "Primary", "p4", 4, "English"),
+  mk("Arabic Language", "Primary", "p5", 5, "Arabic"),
+  mk("Mathematics", "Primary", "p5", 5, "Mathematics"),
+  mk("French Language", "Primary", "p5", 5, "French"),
+
+  // ===== Middle (CEM) =====
+  mk("Arabic Language", "Middle", "m1", 1, "Arabic"),
+  mk("Mathematics", "Middle", "m1", 1, "Mathematics"),
+  mk("French Language", "Middle", "m1", 1, "French"),
+  mk("English", "Middle", "m1", 1, "English"),
+  mk("Mathematics", "Middle", "m2", 2, "Mathematics"),
+  mk("Physics", "Middle", "m2", 2, "Physics"),
+  mk("French Language", "Middle", "m2", 2, "French"),
+  mk("Mathematics", "Middle", "m3", 3, "Mathematics"),
+  mk("Natural Sciences", "Middle", "m3", 3, "Natural Sciences"),
+  mk("English", "Middle", "m3", 3, "English"),
+  mk("Mathematics", "Middle", "m4", 4, "Mathematics"),
+  mk("Physics", "Middle", "m4", 4, "Physics"),
+  mk("Arabic Language", "Middle", "m4", 4, "Arabic"),
+
+  // ===== High school — 1AS common cores =====
+  mk("Mathematics", "High School", "hs_tc_sci", 1, "Mathematics"),
+  mk("Physics", "High School", "hs_tc_sci", 1, "Physics"),
+  mk("Natural Sciences", "High School", "hs_tc_sci", 1, "Natural Sciences"),
+  mk("Arabic Language", "High School", "hs_tc_let", 1, "Arabic"),
+  mk("French Language", "High School", "hs_tc_let", 1, "French"),
+  mk("History & Geography", "High School", "hs_tc_let", 1, "History"),
+
+  // ===== High school — 2AS/3AS streams =====
+  // Experimental Sciences
+  mk("Natural Sciences", "High School", "hs_exp", 3, "Natural Sciences"),
+  mk("Physics", "High School", "hs_exp", 3, "Physics"),
+  mk("Mathematics", "High School", "hs_exp", 2, "Mathematics"),
+  // Mathematics
+  mk("Mathematics", "High School", "hs_math", 3, "Mathematics"),
+  mk("Physics", "High School", "hs_math", 3, "Physics"),
+  // Technical Mathematics
+  mk("Mathematics", "High School", "hs_tech", 3, "Mathematics"),
+  mk("Technology", "High School", "hs_tech", 3, "Technology"),
+  mk("Physics", "High School", "hs_tech", 2, "Physics"),
+  // Management & Economics
+  mk("Economics & Management", "High School", "hs_gest", 3, "Economics"),
+  mk("Accounting", "High School", "hs_gest", 3, "Accounting"),
+  mk("Mathematics", "High School", "hs_gest", 2, "Mathematics"),
+  // Literature & Philosophy
+  mk("Philosophy", "High School", "hs_philo", 3, "Philosophy"),
+  mk("Arabic Language", "High School", "hs_philo", 3, "Arabic"),
+  mk("History & Geography", "High School", "hs_philo", 2, "History"),
+  // Foreign Languages
+  mk("English", "High School", "hs_lang", 3, "English"),
+  mk("French Language", "High School", "hs_lang", 3, "French"),
+  mk("Foreign Languages", "High School", "hs_lang", 2, "Foreign Languages"),
+
+  // ===== University (LMD) =====
+  mk("Computer Science", "University", "uni_lic", 1, "Computer Science"),
+  mk("Mathematics", "University", "uni_lic", 1, "Mathematics"),
+  mk("Economics & Management", "University", "uni_lic", 1, "Economics"),
+  mk("Computer Science", "University", "uni_mas", 4, "Computer Science"),
+  mk("Mathematics", "University", "uni_mas", 4, "Mathematics"),
+  mk("Computer Science", "University", "uni_doc", 6, "Computer Science"),
+];
 
 export function mentorName(mentorId: number): string {
   return mentors.find((m) => m.id === mentorId)?.name ?? "Unknown";
@@ -47,19 +213,18 @@ export function mentorName(mentorId: number): string {
 
 export interface CourseFilters {
   search?: string;
-  major?: string;
-  level?: string;
   tier?: string;
+  track?: string;
 }
 
 export function filterCourses(filters: CourseFilters): Course[] {
   const search = (filters.search ?? "").trim().toLowerCase();
-  const major = filters.major ?? "";
-  const level = filters.level ?? "";
   const tier = filters.tier ?? "";
+  const track = filters.track ?? "";
 
   return courses.filter((c) => {
     if (tier !== "" && tier !== "All" && c.tier !== tier) return false;
+    if (track !== "" && c.track !== track) return false;
     if (
       search !== "" &&
       !c.subject.toLowerCase().includes(search) &&
@@ -67,22 +232,8 @@ export function filterCourses(filters: CourseFilters): Course[] {
     ) {
       return false;
     }
-    if (major !== "" && major !== "All Categories" && c.major !== major) {
-      return false;
-    }
-    if (level !== "" && level !== "All Levels" && c.level !== level) {
-      return false;
-    }
     return true;
   });
-}
-
-export function getMajors(): string[] {
-  return Array.from(new Set(courses.map((c) => c.major))).sort();
-}
-
-export function getLevels(): string[] {
-  return Array.from(new Set(courses.map((c) => c.level))).sort();
 }
 
 export function getCourseById(id: number): Course | undefined {
@@ -113,12 +264,17 @@ export function getLessonsForMajor(major: string): string[] {
     case "chemistry":
       return ["Atomic Structure", "Reactions", "Organic Chemistry", "Lab Work"];
     case "biology":
+    case "natural sciences":
       return ["Cells", "Genetics", "Human Body", "Ecology"];
     case "computer science":
       return ["Programming Basics", "Data Structures", "Databases", "Projects"];
+    case "economics":
+    case "accounting":
+      return ["Core Concepts", "Advanced Topics", "Practical Applications", "Practice"];
     case "english":
     case "french":
     case "arabic":
+    case "foreign languages":
       return ["Grammar", "Vocabulary", "Conversation", "Writing"];
     default:
       return ["Introduction", "Core Concepts", "Advanced Topics", "Practice"];
