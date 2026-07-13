@@ -1,5 +1,13 @@
 .authPage {
-  padding: 60px 0 90px;
+  min-height: calc(100vh - 230px); /* shorter section → footer sits closer */
+  display: flex;
+  align-items: center;
+  padding: 56px 0;
+}
+
+/* keep the inner container full-width when the page is a flex row */
+.authPage :global(.container) {
+  width: 100%;
 }
 
 .authGrid {
@@ -11,14 +19,36 @@
 
 /* ===== Illustration (left) ===== */
 .illustration {
+  position: relative;
   display: flex;
   justify-content: center;
+  margin-inline-start: -40px;
+}
+
+/* soft purple glow behind the artwork — same purple as the navbar (--primary) */
+.illustration::before {
+  content: "";
+  position: absolute;
+  inset: 2% 4%;
+  z-index: 0;
+  background: radial-gradient(
+    circle at 50% 46%,
+    rgba(83, 74, 183, 0.18),
+    rgba(83, 74, 183, 0.06) 45%,
+    transparent 70%
+  );
+  filter: blur(10px);
+  border-radius: 46% 54% 58% 42% / 52% 46% 54% 48%;
+  pointer-events: none;
 }
 
 .illustration img {
+  position: relative;
+  z-index: 1;
   width: 100%;
-  max-width: 520px;
+  max-width: 500px;
   height: auto;
+  transform: scale(1.06);
 }
 
 /* ===== Auth card (right) ===== */
@@ -26,61 +56,15 @@
   background: white;
   border: 1px solid var(--line);
   border-radius: 24px;
-  padding: 36px 38px 40px;
+  padding: 40px 42px 44px;
   box-shadow: 0 24px 60px rgba(83, 74, 183, 0.12);
-  max-width: 480px;
+  max-width: 520px;
   width: 100%;
+  min-height: 560px;
   margin-inline: auto;
-}
-
-/* Tabs */
-.tabs {
-  position: relative;
   display: flex;
-  background: var(--bg-soft);
-  border-radius: 14px;
-  padding: 5px;
-  margin-bottom: 26px;
-}
-
-.tabSlider {
-  position: absolute;
-  top: 5px;
-  bottom: 5px;
-  inset-inline-start: 5px;
-  width: calc(50% - 5px);
-  border-radius: 10px;
-  background: white;
-  box-shadow: 0 4px 12px rgba(83, 74, 183, 0.12);
-  transition: transform 0.3s ease;
-}
-
-.tabSliderRegister {
-  transform: translateX(100%);
-}
-
-/* keep the slider moving to the correct side in RTL */
-:global([dir="rtl"]) .tabSliderRegister {
-  transform: translateX(-100%);
-}
-
-.tab {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  padding: 11px 0;
-  border: none;
-  background: transparent;
-  font-family: "Poppins", sans-serif;
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--muted);
-  cursor: pointer;
-  transition: color 0.25s ease;
-}
-
-.tabActive {
-  color: var(--primary);
+  flex-direction: column;
+  justify-content: center;
 }
 
 /* Heading */
@@ -259,10 +243,6 @@
   accent-color: var(--primary);
 }
 
-.checkmark {
-  display: none;
-}
-
 .termsLink {
   color: var(--primary);
   font-weight: 600;
@@ -346,17 +326,13 @@
   color: var(--muted);
 }
 
-.switch button {
-  border: none;
-  background: transparent;
-  font-family: "Poppins", sans-serif;
+.switch a {
   font-size: 14px;
   font-weight: 700;
   color: var(--primary);
-  cursor: pointer;
 }
 
-.switch button:hover {
+.switch a:hover {
   text-decoration: underline;
 }
 
@@ -387,9 +363,11 @@
   }
   .illustration {
     order: -1;
+    margin-inline-start: 0;
   }
   .illustration img {
-    max-width: 340px;
+    max-width: 320px;
+    transform: none;
   }
 }
 
@@ -397,5 +375,59 @@
   .card {
     padding: 28px 22px 32px;
     border-radius: 20px;
+  }
+}
+
+/* ===== Entrance animations (on navigating to login / register) ===== */
+@keyframes authFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes authRise {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes authRiseScale {
+  from { opacity: 0; transform: translateY(22px) scale(1.03); }
+  to { opacity: 1; transform: translateY(0) scale(1.06); }
+}
+
+.illustration img {
+  animation: authRiseScale 0.7s ease both;
+}
+
+.card {
+  animation: authFade 0.5s ease both;
+}
+
+/* staggered reveal of the card's contents */
+.head {
+  animation: authRise 0.5s ease 0.12s both;
+}
+.form {
+  animation: authRise 0.5s ease 0.22s both;
+}
+.divider {
+  animation: authRise 0.5s ease 0.3s both;
+}
+.googleBtn {
+  animation: authRise 0.5s ease 0.36s both;
+}
+.switch {
+  animation: authRise 0.5s ease 0.42s both;
+}
+
+/* respect users who prefer less motion */
+@media (prefers-reduced-motion: reduce) {
+  .illustration img,
+  .card,
+  .head,
+  .form,
+  .divider,
+  .googleBtn,
+  .switch {
+    animation: none;
   }
 }

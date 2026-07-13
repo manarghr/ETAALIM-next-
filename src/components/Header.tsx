@@ -45,7 +45,7 @@ export default function Header() {
         </nav>
         <div className={styles.signIn}>
           <LanguageSwitcher />
-          <Link href="/signup" className={styles.loginBtn}>
+          <Link href="/login" className={styles.loginBtn}>
             {t("nav.login")}
           </Link>
           <Link href="/signup" className={styles.signBtn}>
