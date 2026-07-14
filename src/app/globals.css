@@ -46,6 +46,9 @@ body {
   background-image: radial-gradient(rgba(83, 74, 183, 0.17) 1.3px, transparent 1.3px);
   background-size: 24px 24px;
   line-height: 1.6;
+  /* Off-canvas drawers park off-screen; clip (not hidden, which would break the
+     sticky header) stops them from ever widening the page — notably in RTL. */
+  overflow-x: clip;
 }
 
 /* Arabic (IBM Plex Sans Arabic) reads better with a touch more line-height and
