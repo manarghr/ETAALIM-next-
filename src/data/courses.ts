@@ -53,15 +53,27 @@ export const TRACKS: Track[] = [
   { key: "m2", tier: "Middle", code: "2AM" },
   { key: "m3", tier: "Middle", code: "3AM" },
   { key: "m4", tier: "Middle", code: "4AM", exam: "BEM" },
-  // High school — 1AS common cores + 2AS/3AS streams, 3AS → BAC
+  // High school — 1AS common cores, then 2AS & 3AS streams (only 3AS → BAC)
   { key: "hs_tc_sci", tier: "High School", code: "1AS" },
   { key: "hs_tc_let", tier: "High School", code: "1AS" },
-  { key: "hs_exp", tier: "High School", code: "2AS·3AS", exam: "BAC" },
-  { key: "hs_math", tier: "High School", code: "2AS·3AS", exam: "BAC" },
-  { key: "hs_tech", tier: "High School", code: "2AS·3AS", exam: "BAC" },
-  { key: "hs_gest", tier: "High School", code: "2AS·3AS", exam: "BAC" },
-  { key: "hs_philo", tier: "High School", code: "2AS·3AS", exam: "BAC" },
-  { key: "hs_lang", tier: "High School", code: "2AS·3AS", exam: "BAC" },
+  // Experimental Sciences
+  { key: "hs_exp_2as", tier: "High School", code: "2AS" },
+  { key: "hs_exp_3as", tier: "High School", code: "3AS", exam: "BAC" },
+  // Mathematics
+  { key: "hs_math_2as", tier: "High School", code: "2AS" },
+  { key: "hs_math_3as", tier: "High School", code: "3AS", exam: "BAC" },
+  // Technical Mathematics
+  { key: "hs_tech_2as", tier: "High School", code: "2AS" },
+  { key: "hs_tech_3as", tier: "High School", code: "3AS", exam: "BAC" },
+  // Management & Economics
+  { key: "hs_gest_2as", tier: "High School", code: "2AS" },
+  { key: "hs_gest_3as", tier: "High School", code: "3AS", exam: "BAC" },
+  // Literature & Philosophy
+  { key: "hs_philo_2as", tier: "High School", code: "2AS" },
+  { key: "hs_philo_3as", tier: "High School", code: "3AS", exam: "BAC" },
+  // Foreign Languages
+  { key: "hs_lang_2as", tier: "High School", code: "2AS" },
+  { key: "hs_lang_3as", tier: "High School", code: "3AS", exam: "BAC" },
   // University (LMD)
   { key: "uni_lic", tier: "University", code: "Licence" },
   { key: "uni_mas", tier: "University", code: "Master" },
@@ -74,6 +86,131 @@ export function tracksForTier(tier: Tier): Track[] {
 
 export function getTrack(key: string): Track | undefined {
   return TRACKS.find((t) => t.key === key);
+}
+
+// ===== Drill-down navigation tree =====
+// The year/stream selector on the courses page. Most tiers are a single flat
+// level, but High School drills: year (1AS/2AS/3AS) → branch → stream.
+export interface NavNode {
+  /** unique id, used in the selected path */
+  key: string;
+  /** short code chip (e.g. "1AS", "Licence"); omitted for branch/stream nodes */
+  code?: string;
+  /** i18n label key under coursesPage.nav.* */
+  label: string;
+  /** exam tag shown on the chip / breadcrumb */
+  exam?: "BEM" | "BAC";
+  /** leaf nodes point at the course.track values they select */
+  tracks?: string[];
+  /** branch nodes drill one level deeper */
+  children?: NavNode[];
+}
+
+export const NAV_TREE: Record<Tier, NavNode[]> = {
+  Primary: [
+    { key: "p1", code: "1AP", label: "p1", tracks: ["p1"] },
+    { key: "p2", code: "2AP", label: "p2", tracks: ["p2"] },
+    { key: "p3", code: "3AP", label: "p3", tracks: ["p3"] },
+    { key: "p4", code: "4AP", label: "p4", tracks: ["p4"] },
+    { key: "p5", code: "5AP", label: "p5", tracks: ["p5"] },
+  ],
+  Middle: [
+    { key: "m1", code: "1AM", label: "m1", tracks: ["m1"] },
+    { key: "m2", code: "2AM", label: "m2", tracks: ["m2"] },
+    { key: "m3", code: "3AM", label: "m3", tracks: ["m3"] },
+    { key: "m4", code: "4AM", label: "m4", exam: "BEM", tracks: ["m4"] },
+  ],
+  "High School": [
+    {
+      key: "1as",
+      code: "1AS",
+      label: "y1as",
+      children: [
+        { key: "1as_sci", label: "sciences", tracks: ["hs_tc_sci"] },
+        { key: "1as_let", label: "lettres", tracks: ["hs_tc_let"] },
+      ],
+    },
+    {
+      key: "2as",
+      code: "2AS",
+      label: "y2as",
+      children: [
+        {
+          key: "2as_sci",
+          label: "sciences",
+          children: [
+            { key: "hs_exp_2as", label: "hs_exp", tracks: ["hs_exp_2as"] },
+            { key: "hs_math_2as", label: "hs_math", tracks: ["hs_math_2as"] },
+            { key: "hs_tech_2as", label: "hs_tech", tracks: ["hs_tech_2as"] },
+          ],
+        },
+        {
+          key: "2as_let",
+          label: "lettres",
+          children: [
+            { key: "hs_philo_2as", label: "hs_philo", tracks: ["hs_philo_2as"] },
+            { key: "hs_lang_2as", label: "hs_lang", tracks: ["hs_lang_2as"] },
+          ],
+        },
+        { key: "2as_gest", label: "gestion", tracks: ["hs_gest_2as"] },
+      ],
+    },
+    {
+      key: "3as",
+      code: "3AS",
+      label: "y3as",
+      exam: "BAC",
+      children: [
+        {
+          key: "3as_sci",
+          label: "sciences",
+          children: [
+            { key: "hs_exp_3as", label: "hs_exp", tracks: ["hs_exp_3as"] },
+            { key: "hs_math_3as", label: "hs_math", tracks: ["hs_math_3as"] },
+            { key: "hs_tech_3as", label: "hs_tech", tracks: ["hs_tech_3as"] },
+          ],
+        },
+        {
+          key: "3as_let",
+          label: "lettres",
+          children: [
+            { key: "hs_philo_3as", label: "hs_philo", tracks: ["hs_philo_3as"] },
+            { key: "hs_lang_3as", label: "hs_lang", tracks: ["hs_lang_3as"] },
+          ],
+        },
+        { key: "3as_gest", label: "gestion", tracks: ["hs_gest_3as"] },
+      ],
+    },
+  ],
+  University: [
+    { key: "uni_lic", code: "Licence", label: "uni_lic", tracks: ["uni_lic"] },
+    { key: "uni_mas", code: "Master", label: "uni_mas", tracks: ["uni_mas"] },
+    { key: "uni_doc", code: "Doctorat", label: "uni_doc", tracks: ["uni_doc"] },
+  ],
+};
+
+export function navRoots(tier: Tier): NavNode[] {
+  return NAV_TREE[tier] ?? [];
+}
+
+/** Resolve a path of node keys into the matching NavNode chain. */
+export function resolveNavPath(tier: Tier, path: string[]): NavNode[] {
+  const chain: NavNode[] = [];
+  let level = navRoots(tier);
+  for (const key of path) {
+    const found = level.find((n) => n.key === key);
+    if (!found) break;
+    chain.push(found);
+    level = found.children ?? [];
+  }
+  return chain;
+}
+
+/** All course.track values reachable under a node (recursively). */
+export function leafTracks(node: NavNode): string[] {
+  if (node.tracks) return node.tracks;
+  if (node.children) return node.children.flatMap(leafTracks);
+  return [];
 }
 
 // ===== Course list (Algerian curriculum) =====
@@ -173,30 +310,55 @@ export const courses: Course[] = [
   mk("French Language", "High School", "hs_tc_let", 1, "French"),
   mk("History & Geography", "High School", "hs_tc_let", 1, "History"),
 
-  // ===== High school — 2AS/3AS streams =====
+  // ===== High school — 2AS streams =====
   // Experimental Sciences
-  mk("Natural Sciences", "High School", "hs_exp", 3, "Natural Sciences"),
-  mk("Physics", "High School", "hs_exp", 3, "Physics"),
-  mk("Mathematics", "High School", "hs_exp", 2, "Mathematics"),
+  mk("Natural Sciences", "High School", "hs_exp_2as", 2, "Natural Sciences"),
+  mk("Physics", "High School", "hs_exp_2as", 2, "Physics"),
+  mk("Mathematics", "High School", "hs_exp_2as", 2, "Mathematics"),
   // Mathematics
-  mk("Mathematics", "High School", "hs_math", 3, "Mathematics"),
-  mk("Physics", "High School", "hs_math", 3, "Physics"),
+  mk("Mathematics", "High School", "hs_math_2as", 2, "Mathematics"),
+  mk("Physics", "High School", "hs_math_2as", 2, "Physics"),
   // Technical Mathematics
-  mk("Mathematics", "High School", "hs_tech", 3, "Mathematics"),
-  mk("Technology", "High School", "hs_tech", 3, "Technology"),
-  mk("Physics", "High School", "hs_tech", 2, "Physics"),
+  mk("Mathematics", "High School", "hs_tech_2as", 2, "Mathematics"),
+  mk("Technology", "High School", "hs_tech_2as", 2, "Technology"),
+  mk("Physics", "High School", "hs_tech_2as", 2, "Physics"),
   // Management & Economics
-  mk("Economics & Management", "High School", "hs_gest", 3, "Economics"),
-  mk("Accounting", "High School", "hs_gest", 3, "Accounting"),
-  mk("Mathematics", "High School", "hs_gest", 2, "Mathematics"),
+  mk("Economics & Management", "High School", "hs_gest_2as", 2, "Economics"),
+  mk("Accounting", "High School", "hs_gest_2as", 2, "Accounting"),
+  mk("Mathematics", "High School", "hs_gest_2as", 2, "Mathematics"),
   // Literature & Philosophy
-  mk("Philosophy", "High School", "hs_philo", 3, "Philosophy"),
-  mk("Arabic Language", "High School", "hs_philo", 3, "Arabic"),
-  mk("History & Geography", "High School", "hs_philo", 2, "History"),
+  mk("Philosophy", "High School", "hs_philo_2as", 2, "Philosophy"),
+  mk("Arabic Language", "High School", "hs_philo_2as", 2, "Arabic"),
+  mk("History & Geography", "High School", "hs_philo_2as", 2, "History"),
   // Foreign Languages
-  mk("English", "High School", "hs_lang", 3, "English"),
-  mk("French Language", "High School", "hs_lang", 3, "French"),
-  mk("Foreign Languages", "High School", "hs_lang", 2, "Foreign Languages"),
+  mk("English", "High School", "hs_lang_2as", 2, "English"),
+  mk("French Language", "High School", "hs_lang_2as", 2, "French"),
+  mk("Foreign Languages", "High School", "hs_lang_2as", 2, "Foreign Languages"),
+
+  // ===== High school — 3AS streams (exam year → BAC) =====
+  // Experimental Sciences
+  mk("Natural Sciences", "High School", "hs_exp_3as", 3, "Natural Sciences"),
+  mk("Physics", "High School", "hs_exp_3as", 3, "Physics"),
+  mk("Mathematics", "High School", "hs_exp_3as", 3, "Mathematics"),
+  // Mathematics
+  mk("Mathematics", "High School", "hs_math_3as", 3, "Mathematics"),
+  mk("Physics", "High School", "hs_math_3as", 3, "Physics"),
+  // Technical Mathematics
+  mk("Mathematics", "High School", "hs_tech_3as", 3, "Mathematics"),
+  mk("Technology", "High School", "hs_tech_3as", 3, "Technology"),
+  mk("Physics", "High School", "hs_tech_3as", 3, "Physics"),
+  // Management & Economics
+  mk("Economics & Management", "High School", "hs_gest_3as", 3, "Economics"),
+  mk("Accounting", "High School", "hs_gest_3as", 3, "Accounting"),
+  mk("Mathematics", "High School", "hs_gest_3as", 3, "Mathematics"),
+  // Literature & Philosophy
+  mk("Philosophy", "High School", "hs_philo_3as", 3, "Philosophy"),
+  mk("Arabic Language", "High School", "hs_philo_3as", 3, "Arabic"),
+  mk("History & Geography", "High School", "hs_philo_3as", 3, "History"),
+  // Foreign Languages
+  mk("English", "High School", "hs_lang_3as", 3, "English"),
+  mk("French Language", "High School", "hs_lang_3as", 3, "French"),
+  mk("Foreign Languages", "High School", "hs_lang_3as", 3, "Foreign Languages"),
 
   // ===== University (LMD) =====
   mk("Computer Science", "University", "uni_lic", 1, "Computer Science"),
@@ -214,17 +376,18 @@ export function mentorName(mentorId: number): string {
 export interface CourseFilters {
   search?: string;
   tier?: string;
-  track?: string;
+  /** limit to these course.track values (empty/undefined = no track filter) */
+  tracks?: string[];
 }
 
 export function filterCourses(filters: CourseFilters): Course[] {
   const search = (filters.search ?? "").trim().toLowerCase();
   const tier = filters.tier ?? "";
-  const track = filters.track ?? "";
+  const tracks = filters.tracks ?? [];
 
   return courses.filter((c) => {
     if (tier !== "" && tier !== "All" && c.tier !== tier) return false;
-    if (track !== "" && c.track !== track) return false;
+    if (tracks.length > 0 && !tracks.includes(c.track)) return false;
     if (
       search !== "" &&
       !c.subject.toLowerCase().includes(search) &&

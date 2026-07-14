@@ -50,6 +50,62 @@
   margin-bottom: 12px;
 }
 
+/* Breadcrumb trail for the drill-down */
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 3px;
+  margin-bottom: 14px;
+}
+
+.breadcrumb > button,
+.crumbItem button {
+  font-family: "Poppins", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 7px;
+  border-radius: 8px;
+  transition: color 0.2s ease, background 0.2s ease;
+}
+
+.breadcrumb > button:hover,
+.crumbItem button:hover {
+  color: var(--primary);
+  background: rgba(83, 74, 183, 0.08);
+}
+
+.crumbItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.crumbItem i {
+  color: #c7cdd6;
+  font-size: 10px;
+}
+
+.crumbItem button {
+  color: var(--navy);
+}
+
+.crumbItem button b {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+/* arrow indicator on chips that drill deeper */
+.chipArrow {
+  font-size: 11px;
+  opacity: 0.5;
+  margin-inline-start: 3px;
+}
+
 .trackChips {
   display: flex;
   flex-wrap: wrap;
@@ -182,6 +238,220 @@
 
 .tierCardActive .tierCount {
   color: rgba(255, 255, 255, 0.85);
+}
+
+/* ===== Exam revision promo (BEM & BAC) ===== */
+.examPrep {
+  position: relative;
+  margin-top: 26px;
+  border-radius: 22px;
+  padding: 34px;
+  background: linear-gradient(135deg, #2a2c30 0%, #1c1d1f 100%);
+  overflow: hidden;
+}
+
+.examPrep::before {
+  content: "";
+  position: absolute;
+  top: -70px;
+  inset-inline-end: -50px;
+  width: 280px;
+  height: 280px;
+  background: radial-gradient(circle, rgba(29, 158, 117, 0.4), transparent 70%);
+  pointer-events: none;
+}
+
+.examPrep::after {
+  content: "";
+  position: absolute;
+  bottom: -90px;
+  inset-inline-start: -60px;
+  width: 300px;
+  height: 300px;
+  background: radial-gradient(circle, rgba(83, 74, 183, 0.35), transparent 70%);
+  pointer-events: none;
+}
+
+.examPrepHead {
+  position: relative;
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.examEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #9be7cd;
+  background: rgba(29, 158, 117, 0.14);
+  border: 1px solid rgba(29, 158, 117, 0.3);
+  padding: 5px 14px;
+  border-radius: 999px;
+}
+
+.examPrepHead h2 {
+  color: white;
+  font-size: 25px;
+  font-weight: 700;
+  margin-top: 14px;
+}
+
+.examPrepHead p {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 15px;
+  margin-top: 8px;
+  max-width: 560px;
+  margin-inline: auto;
+}
+
+.examCards {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 20px;
+}
+
+.examCard {
+  position: relative;
+  flex: 1 1 300px;
+  max-width: 560px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 18px;
+  padding: 24px;
+  transition: transform 0.28s ease, border-color 0.28s ease, background 0.28s ease;
+}
+
+.examCard:hover {
+  transform: translateY(-4px);
+  border-color: var(--ac);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.examCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.examAbbr {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.examAbbr span {
+  width: 46px;
+  height: 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  background: var(--ac);
+  color: white;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  box-shadow: 0 8px 18px var(--ac-glow);
+}
+
+.discount {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.05;
+  font-weight: 800;
+  color: white;
+  background: var(--ac);
+  padding: 8px 15px;
+  border-radius: 14px;
+  box-shadow: 0 8px 18px var(--ac-glow);
+}
+
+.discount b {
+  font-size: 19px;
+  font-weight: 800;
+}
+
+.discount small {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.examCard h3 {
+  color: white;
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.examCardDesc {
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 8px 0 18px;
+}
+
+.examPerks {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.examPerks li {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13.5px;
+}
+
+.examPerks i {
+  color: var(--ac-text);
+  font-size: 13px;
+}
+
+.examCta {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 20px;
+  border-radius: 12px;
+  background: var(--ac);
+  color: white;
+  font-family: "Poppins", sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: gap 0.25s ease, filter 0.25s ease;
+}
+
+.examCta:hover {
+  gap: 13px;
+  filter: brightness(1.1);
+}
+
+@media (max-width: 720px) {
+  .examPrep {
+    padding: 26px 18px;
+  }
+  .examPrepHead h2 {
+    font-size: 21px;
+  }
 }
 
 /* Search toolbar */

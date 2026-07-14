@@ -10,7 +10,10 @@ import {
   TIERS,
   Tier,
   Course,
-  tracksForTier,
+  NavNode,
+  navRoots,
+  resolveNavPath,
+  leafTracks,
   getTrack,
   formatDZD,
 } from "@/data/courses";
@@ -53,28 +56,67 @@ export default function CoursesClient({
   // client-side state so switching level / year filters instantly, without a
   // page navigation or scroll jump.
   const [tierFilter, setTierFilter] = useState(() => first(sp.tier));
-  const [trackFilter, setTrackFilter] = useState(() => first(sp.track));
+  const [navPath, setNavPath] = useState<string[]>(() => {
+    const t0 = first(sp.track);
+    return t0 ? [t0] : [];
+  });
   const [search, setSearch] = useState(() => first(sp.search));
   const [page, setPage] = useState(1);
 
-  const filtered = filterCourses({ search, tier: tierFilter, track: trackFilter });
+  // Resolve the current position inside the active tier's drill-down tree.
+  const chain = tierFilter ? resolveNavPath(tierFilter as Tier, navPath) : [];
+  const deepest = chain[chain.length - 1];
+
+  // Work out (a) the chips to show at the current level, (b) the breadcrumb
+  // trail, and (c) which leaf (if any) is currently selected/highlighted.
+  let levelNodes: NavNode[] = [];
+  let crumbs: NavNode[] = [];
+  let activeKey: string | null = null;
+  if (tierFilter) {
+    if (!deepest) {
+      levelNodes = navRoots(tierFilter as Tier);
+    } else if (deepest.children) {
+      levelNodes = deepest.children;
+      crumbs = chain;
+    } else {
+      // a leaf is selected — keep its siblings visible and highlight it
+      const parent = chain[chain.length - 2];
+      levelNodes = parent?.children ?? navRoots(tierFilter as Tier);
+      crumbs = chain.slice(0, -1);
+      activeKey = deepest.key;
+    }
+  }
+
+  // Courses shown = union of every leaf track under the deepest selected node.
+  const activeTracks = deepest ? leafTracks(deepest) : [];
+  const filtered = filterCourses({ search, tier: tierFilter, tracks: activeTracks });
   const totalCourses = filtered.length;
   const totalPages = Math.ceil(totalCourses / COURSES_PER_PAGE);
   const safePage = Math.min(page, Math.max(totalPages, 1));
   const offset = (safePage - 1) * COURSES_PER_PAGE;
   const pageCourses = filtered.slice(offset, offset + COURSES_PER_PAGE);
 
-  const tracks = tierFilter ? tracksForTier(tierFilter as Tier) : [];
+  // The revision promo only shows once the exam year itself is chosen.
+  const showBem = tierFilter === "Middle" && navPath.includes("m4");
+  const showBac = tierFilter === "High School" && navPath.includes("3as");
 
   const pickTier = (tier: string) => {
     setTierFilter((prev) => (prev === tier ? "" : tier));
-    setTrackFilter("");
+    setNavPath([]);
     setPage(1);
   };
-  const pickTrack = (track: string) => {
-    setTrackFilter(track);
+  // Drill into (branch) or select (leaf) a node at the current level.
+  const pickNode = (node: NavNode) => {
+    setNavPath([...crumbs.map((n) => n.key), node.key]);
     setPage(1);
   };
+  // Jump back up the breadcrumb (index -1 = back to the top level).
+  const goToCrumb = (index: number) => {
+    setNavPath(index < 0 ? [] : crumbs.slice(0, index + 1).map((n) => n.key));
+    setPage(1);
+  };
+  const scrollToResults = () =>
+    document.getElementById("browse")?.scrollIntoView({ behavior: "smooth" });
 
   return (
     <>
@@ -117,34 +159,60 @@ export default function CoursesClient({
             </div>
           </div>
 
-          {/* Year / stream selector — appears once a level is chosen */}
-          {tierFilter && tracks.length > 0 && (
+          {/* Year / stream selector — drill-down, appears once a level is chosen */}
+          {tierFilter && (
             <div className={styles.trackBar}>
               <h3 className={styles.trackHeading}>{t("coursesPage.yearsHeading")}</h3>
+
+              {/* Breadcrumb — only once the user has drilled past the top level */}
+              {crumbs.length > 0 && (
+                <div className={styles.breadcrumb}>
+                  <button type="button" onClick={() => goToCrumb(-1)}>
+                    {t("coursesPage.allYears")}
+                  </button>
+                  {crumbs.map((node, i) => (
+                    <span key={node.key} className={styles.crumbItem}>
+                      <i className="fa fa-angle-right"></i>
+                      <button type="button" onClick={() => goToCrumb(i)}>
+                        {node.code && <b>{node.code}</b>}{" "}
+                        {t(`coursesPage.nav.${node.label}`)}
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Chips for the current level */}
               <div className={styles.trackChips}>
-                <button
-                  type="button"
-                  onClick={() => pickTrack("")}
-                  className={`${styles.trackChip} ${
-                    !trackFilter ? styles.trackChipActive : ""
-                  }`}
-                >
-                  {t("coursesPage.allYears")}
-                </button>
-                {tracks.map((tk) => (
+                {crumbs.length === 0 && (
                   <button
-                    key={tk.key}
                     type="button"
-                    onClick={() => pickTrack(tk.key)}
+                    onClick={() => goToCrumb(-1)}
                     className={`${styles.trackChip} ${
-                      trackFilter === tk.key ? styles.trackChipActive : ""
+                      !deepest ? styles.trackChipActive : ""
                     }`}
                   >
-                    <b>{tk.code}</b> {t(`coursesPage.tracks.${tk.key}`)}
-                    {tk.exam && (
+                    {t("coursesPage.allYears")}
+                  </button>
+                )}
+                {levelNodes.map((node) => (
+                  <button
+                    key={node.key}
+                    type="button"
+                    onClick={() => pickNode(node)}
+                    className={`${styles.trackChip} ${
+                      activeKey === node.key ? styles.trackChipActive : ""
+                    }`}
+                  >
+                    {node.code && <b>{node.code}</b>}{" "}
+                    {t(`coursesPage.nav.${node.label}`)}
+                    {node.exam && (
                       <span className={styles.examTag}>
-                        {t(`coursesPage.exam${tk.exam}`)}
+                        {t(`coursesPage.exam${node.exam}`)}
                       </span>
+                    )}
+                    {node.children && (
+                      <i className={`fa fa-angle-right ${styles.chipArrow}`}></i>
                     )}
                   </button>
                 ))}
@@ -152,8 +220,103 @@ export default function CoursesClient({
             </div>
           )}
 
+          {/* Exam-year revision promo — only after the exam year is chosen */}
+          {(showBem || showBac) && (
+            <section className={styles.examPrep}>
+              <div className={styles.examPrepHead}>
+                <span className={styles.examEyebrow}>
+                  <i className="fa fa-bolt"></i> {t("coursesPage.examPrep.eyebrow")}
+                </span>
+                <h2>{t("coursesPage.examPrep.title")}</h2>
+                <p>{t("coursesPage.examPrep.subtitle")}</p>
+              </div>
+              <div className={styles.examCards}>
+                {showBem && (
+                  <div
+                    className={styles.examCard}
+                    style={
+                      {
+                        "--ac": "var(--primary)",
+                        "--ac-glow": "rgba(83, 74, 183, 0.4)",
+                        "--ac-text": "#b7b1ef",
+                      } as React.CSSProperties
+                    }
+                  >
+                    <div className={styles.examCardTop}>
+                      <span className={styles.examAbbr}>
+                        <span>BEM</span>
+                        {t("coursesPage.examPrep.bemFor")}
+                      </span>
+                      <span className={styles.discount}>
+                        <b>{t("coursesPage.examPrep.discount")}</b>
+                        <small>{t("coursesPage.examPrep.off")}</small>
+                      </span>
+                    </div>
+                    <h3>{t("coursesPage.examPrep.bemName")}</h3>
+                    <p className={styles.examCardDesc}>
+                      {t("coursesPage.examPrep.bemDesc")}
+                    </p>
+                    <ul className={styles.examPerks}>
+                      <li><i className="fa fa-check"></i> {t("coursesPage.examPrep.perk1")}</li>
+                      <li><i className="fa fa-check"></i> {t("coursesPage.examPrep.perk2")}</li>
+                      <li><i className="fa fa-check"></i> {t("coursesPage.examPrep.perk3")}</li>
+                    </ul>
+                    <button
+                      type="button"
+                      className={styles.examCta}
+                      onClick={scrollToResults}
+                    >
+                      {t("coursesPage.examPrep.bemCta")}{" "}
+                      <i className="fa fa-arrow-right"></i>
+                    </button>
+                  </div>
+                )}
+                {showBac && (
+                  <div
+                    className={styles.examCard}
+                    style={
+                      {
+                        "--ac": "#1d9e75",
+                        "--ac-glow": "rgba(29, 158, 117, 0.4)",
+                        "--ac-text": "#9be7cd",
+                      } as React.CSSProperties
+                    }
+                  >
+                    <div className={styles.examCardTop}>
+                      <span className={styles.examAbbr}>
+                        <span>BAC</span>
+                        {t("coursesPage.examPrep.bacFor")}
+                      </span>
+                      <span className={styles.discount}>
+                        <b>{t("coursesPage.examPrep.discount")}</b>
+                        <small>{t("coursesPage.examPrep.off")}</small>
+                      </span>
+                    </div>
+                    <h3>{t("coursesPage.examPrep.bacName")}</h3>
+                    <p className={styles.examCardDesc}>
+                      {t("coursesPage.examPrep.bacDesc")}
+                    </p>
+                    <ul className={styles.examPerks}>
+                      <li><i className="fa fa-check"></i> {t("coursesPage.examPrep.perk1")}</li>
+                      <li><i className="fa fa-check"></i> {t("coursesPage.examPrep.perk2")}</li>
+                      <li><i className="fa fa-check"></i> {t("coursesPage.examPrep.perk3")}</li>
+                    </ul>
+                    <button
+                      type="button"
+                      className={styles.examCta}
+                      onClick={scrollToResults}
+                    >
+                      {t("coursesPage.examPrep.bacCta")}{" "}
+                      <i className="fa fa-arrow-right"></i>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
           {/* Search */}
-          <div className={styles.toolbar}>
+          <div className={styles.toolbar} id="browse">
             <div className={styles.searchCard}>
               <div className={styles.searchInput}>
                 <i className="fa fa-search"></i>
@@ -177,7 +340,7 @@ export default function CoursesClient({
           </p>
 
           {/* Grid — keyed so it re-fades when the level/year/page changes */}
-          <div className={styles.grid} key={`${tierFilter}-${trackFilter}-${safePage}`}>
+          <div className={styles.grid} key={`${tierFilter}-${navPath.join(".")}-${safePage}`}>
             {pageCourses.length > 0 ? (
               pageCourses.map((course) => {
                 const mentor = getMentorById(course.mentorId);
