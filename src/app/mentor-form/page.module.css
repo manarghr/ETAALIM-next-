@@ -372,7 +372,7 @@
   font-size: 14px;
   transition: all 0.3s ease;
   background-color: #f9f9f9;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
 }
 
 .formGroup input:focus {
@@ -709,7 +709,7 @@
   border: 1px solid #ddd;
   padding: 8px 12px;
   font-size: 14px;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
 }
 
 .addSpecialty button {

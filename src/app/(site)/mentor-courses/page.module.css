@@ -47,7 +47,7 @@
   padding: 11px 15px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
   font-size: 14px;
   background: #f8fafc;
   transition: all 0.25s ease;

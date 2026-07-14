@@ -193,7 +193,7 @@
   font-size: 14px;
   transition: all 0.25s ease;
   background-color: #f8fafc;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
 }
 
 .inputContainer input:focus,

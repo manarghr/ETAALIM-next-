@@ -15,10 +15,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Poppins font + Font Awesome 4.7 (loaded via CDN, as in the original site) */}
+        {/* Poppins (Latin) + IBM Plex Sans Arabic (Arabic) + Font Awesome 4.7, via CDN */}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap"
         />
         <link
           rel="stylesheet"

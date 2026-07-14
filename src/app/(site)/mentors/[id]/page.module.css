@@ -279,7 +279,7 @@
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 12px;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
   margin-bottom: 16px;
   min-height: 130px;
   background: #f8fafc;

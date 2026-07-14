@@ -40,12 +40,19 @@
 }
 
 body {
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
   color: var(--muted);
   background-color: var(--bg-page);
   background-image: radial-gradient(rgba(83, 74, 183, 0.17) 1.3px, transparent 1.3px);
   background-size: 24px 24px;
   line-height: 1.6;
+}
+
+/* Arabic (IBM Plex Sans Arabic) reads better with a touch more line-height and
+   no Latin-style letter-spacing, which harms joined Arabic script. */
+[dir="rtl"] {
+  line-height: 1.8;
+  letter-spacing: normal !important;
 }
 
 a {

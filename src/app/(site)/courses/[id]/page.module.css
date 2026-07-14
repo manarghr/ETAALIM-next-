@@ -356,7 +356,7 @@
   border: 1px solid var(--line);
   resize: vertical;
   min-height: 120px;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
   font-size: 14px;
   background: #f8fafc;
   transition: all 0.25s ease;
@@ -464,7 +464,7 @@
   border-radius: 12px;
   font-size: 14px;
   background: #f8fafc;
-  font-family: "Poppins", sans-serif;
+  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
 }
 
 .newsletterForm input:focus {
