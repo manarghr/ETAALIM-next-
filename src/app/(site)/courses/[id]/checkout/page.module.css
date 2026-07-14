@@ -251,6 +251,15 @@
   flex-shrink: 0;
 }
 
+.courseThumb {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
 .courseLine .cName {
   color: var(--navy);
   font-weight: 700;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Counter from "@/components/Counter";
+import CourseBanner from "@/components/CourseBanner";
 import Reveal from "@/components/Reveal";
 import Faq from "@/components/Faq";
 import { courses, mentorName, formatDZD } from "@/data/courses";
@@ -213,7 +214,7 @@ export default function Home() {
               return (
                 <Reveal key={course.id} className={styles.courseCard} delay={i * 90}>
                   <div className={styles.courseThumb}>
-                    <img src="/images/courses.jpg" alt={course.subject} />
+                    <CourseBanner subject={course.major} seed={course.id} />
                     <span className={styles.courseChip} style={cssVars(categoryAccent(course.major))}>
                       {course.major}
                     </span>

@@ -3,6 +3,7 @@
   display: flex;
   align-items: center;
   padding: 56px 0;
+  overflow-x: clip; /* the illustration's negative margin must not add scroll */
 }
 
 /* keep the inner container full-width when the page is a flex row */

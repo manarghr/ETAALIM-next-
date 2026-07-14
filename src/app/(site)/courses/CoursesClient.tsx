@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
+import CourseBanner from "@/components/CourseBanner";
 import {
   filterCourses,
   courses,
@@ -186,7 +187,7 @@ export default function CoursesClient({
                 return (
                   <div className={styles.card} key={course.id}>
                     <div className={styles.thumb}>
-                      <img src="/images/courses.jpg" alt={tr(course.subject, locale)} />
+                      <CourseBanner subject={course.major} seed={course.id} />
                       <span
                         className={styles.chip}
                         style={cssVars(categoryAccent(course.major))}

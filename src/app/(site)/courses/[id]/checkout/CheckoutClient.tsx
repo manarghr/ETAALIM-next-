@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { Course, JoinOption, formatDZD } from "@/data/courses";
+import CourseBanner from "@/components/CourseBanner";
 import styles from "./page.module.css";
 
 type Method = "baridimob" | "cib";
@@ -215,7 +216,9 @@ export default function CheckoutClient({
           <aside className={styles.summary}>
             <h3>Order summary</h3>
             <div className={styles.courseLine}>
-              <img src="/images/courses.jpg" alt={course.subject} />
+              <div className={styles.courseThumb}>
+                <CourseBanner subject={course.major} seed={course.id} />
+              </div>
               <div>
                 <div className={styles.cName}>{course.subject}</div>
                 <div className={styles.cMeta}>
