@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Course,
@@ -12,12 +13,19 @@ import {
 } from "@/data/courses";
 import { getMentorById, getOtherMentorsInMajor } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
+import { isEnrolled } from "@/lib/enrollment";
 import { categoryAccent } from "@/lib/theme";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./page.module.css";
 
 export default function CourseDetailClient({ course }: { course: Course }) {
   const { t, locale } = useI18n();
+
+  // Reflect a prior purchase (stored client-side) — the course shows as unlocked.
+  const [enrolled, setEnrolled] = useState(false);
+  useEffect(() => {
+    setEnrolled(isEnrolled(course.id));
+  }, [course.id]);
 
   const mentor = getMentorById(course.mentorId);
   const lessons = getLessonsForMajor(course.major);
@@ -121,7 +129,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                 </div>
               </div>
 
-              <div className={styles.panel}>
+              <div className={styles.panel} id="learn">
                 <h2 className={styles.sectionTitle}>{t("courseDetail.learnTitle")}</h2>
                 <ul className={styles.lessonsList}>
                   {lessons.map((lesson) => (
@@ -231,12 +239,25 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                     <i className="fa fa-unlock-alt"></i> {t("courseDetail.lifetime")}
                   </li>
                 </ul>
-                <Link
-                  href={`/courses/${course.id}/checkout?mode=recorded`}
-                  className={`btn btn-primary ${styles.fullBtn}`}
-                >
-                  {t("courseDetail.enrollNow")} <i className="fa fa-arrow-right"></i>
-                </Link>
+                {enrolled ? (
+                  <>
+                    <div className={styles.enrolledBadge}>
+                      <i className="fa fa-check-circle"></i>{" "}
+                      {t("courseDetail.enrolled")}
+                    </div>
+                    <a href="#learn" className={`btn btn-primary ${styles.fullBtn}`}>
+                      {t("courseDetail.startLearning")}{" "}
+                      <i className="fa fa-play"></i>
+                    </a>
+                  </>
+                ) : (
+                  <Link
+                    href={`/courses/${course.id}/checkout?mode=recorded`}
+                    className={`btn btn-primary ${styles.fullBtn}`}
+                  >
+                    {t("courseDetail.enrollNow")} <i className="fa fa-arrow-right"></i>
+                  </Link>
+                )}
               </div>
 
               <div className={styles.sidebarCard}>

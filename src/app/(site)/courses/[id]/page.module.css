@@ -451,6 +451,26 @@
   width: 100%;
 }
 
+/* "You're enrolled" banner shown once the course is unlocked */
+.enrolledBadge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(29, 158, 117, 0.1);
+  border: 1px solid rgba(29, 158, 117, 0.28);
+  color: #157a5b;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.enrolledBadge i {
+  font-size: 16px;
+}
+
 .newsletterForm {
   display: flex;
   flex-direction: column;

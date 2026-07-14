@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { Course, JoinOption, formatDZD } from "@/data/courses";
+import { addEnrollment } from "@/lib/enrollment";
 import CourseBanner from "@/components/CourseBanner";
 import styles from "./page.module.css";
 
@@ -27,7 +28,15 @@ export default function CheckoutClient({
     setSubmitting(true);
     // Payment processing is mocked until the backend is connected.
     setTimeout(() => {
-      setOrderRef("ET-" + Math.floor(100000 + Math.random() * 900000));
+      const ref = "ET-" + Math.floor(100000 + Math.random() * 900000);
+      // Unlock the course locally so the course page reflects it right away.
+      addEnrollment({
+        courseId: course.id,
+        mode: option.mode,
+        ref,
+        date: new Date().toISOString(),
+      });
+      setOrderRef(ref);
       setSubmitting(false);
       setDone(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -42,20 +51,20 @@ export default function CheckoutClient({
             <div className={styles.successIcon}>
               <i className="fa fa-check"></i>
             </div>
-            <h2>Payment successful!</h2>
+            <h2>Thank you!</h2>
             <p>
               You&apos;re enrolled in <b>{course.subject}</b> — {option.title}.
             </p>
-            <p>
-              We&apos;ve sent a confirmation and the session details to your
-              email.
+            <p className={styles.unlockNote}>
+              <i className="fa fa-unlock-alt"></i> This course is now unlocked —
+              a confirmation is on its way to your email.
             </p>
             <div className={styles.orderRef}>Order {orderRef}</div>
             <div className={styles.successActions}>
-              <Link href={`/courses/${course.id}`} className="btn btn-secondary">
-                Back to course
+              <Link href={`/courses/${course.id}`} className="btn btn-primary">
+                Back to course <i className="fa fa-arrow-right"></i>
               </Link>
-              <Link href="/courses" className="btn btn-primary">
+              <Link href="/courses" className="btn btn-secondary">
                 Browse more courses
               </Link>
             </div>
