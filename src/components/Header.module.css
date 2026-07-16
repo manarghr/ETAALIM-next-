@@ -179,13 +179,6 @@
   box-shadow: 0 12px 24px rgba(83, 74, 183, 0.4);
 }
 
-.userWelcome {
-  margin-right: 4px;
-  color: var(--text);
-  font-weight: 500;
-  font-size: 14px;
-}
-
 /* ===== Mobile / small laptop: slide-in drawer nav (Udemy-style) ===== */
 @media (max-width: 960px) {
   .header {

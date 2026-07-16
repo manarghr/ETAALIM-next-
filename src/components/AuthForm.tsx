@@ -2,11 +2,24 @@
 
 import { useState, FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
+import { login } from "@/lib/auth";
+import { setIdentity } from "@/lib/student";
 import styles from "./AuthForm.module.css";
+
+// Turn "yasmine.cherif" → "Yasmine Cherif" for the display name on login.
+function nameFromEmail(email: string): string {
+  const local = email.split("@")[0] || "Student";
+  return local
+    .replace(/[._-]+/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim();
+}
 
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const { t } = useI18n();
+  const router = useRouter();
   const [show, setShow] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [success, setSuccess] = useState(false);
@@ -34,14 +47,23 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    // Backend wiring comes later; show the success confirmation for now.
-    setSuccess(true);
-    form.reset();
+    // Mock sign-up: start a session and go to the dashboard (backend later).
+    const name = String(data.get("name") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
+    login({ name, email, role: "student" });
+    setIdentity(name, email);
+    router.push("/dashboard");
   };
 
   const handleLogin = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // Login submission will be connected to the backend later.
+    const data = new FormData(e.currentTarget);
+    const email = String(data.get("email") ?? "").trim();
+    const name = nameFromEmail(email);
+    // Mock login: start a session and go to the dashboard (backend later).
+    login({ name, email, role: "student" });
+    setIdentity(name, email);
+    router.push("/dashboard");
   };
 
   const isRegister = mode === "register";
@@ -82,6 +104,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                     <input
                       type="email"
                       id="login-email"
+                      name="email"
                       placeholder={t("auth.emailPh")}
                       required
                     />
@@ -95,6 +118,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                     <input
                       type={show.login ? "text" : "password"}
                       id="login-password"
+                      name="password"
                       placeholder={t("auth.passwordPh")}
                       required
                     />

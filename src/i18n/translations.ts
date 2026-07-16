@@ -3,7 +3,7 @@ export type Locale = "en" | "fr" | "ar";
 // Nested translation dictionaries. Access with the useI18n() `t("a.b.c")` helper.
 export const translations = {
   en: {
-    nav: { home: "HOME", about: "ABOUT US", courses: "COURSES", mentors: "MENTORS", contact: "CONTACT US", login: "Login", signin: "Sign In" },
+    nav: { home: "HOME", about: "ABOUT US", courses: "COURSES", mentors: "MENTORS", contact: "CONTACT US", dashboard: "Dashboard", login: "Login", signin: "Sign In", logout: "Logout", hi: "Hi", myAccount: "My account" },
     footer: {
       tagline1: "EMPOWERING EDUCATION",
       tagline2a: "ONE CLICK",
@@ -292,7 +292,7 @@ export const translations = {
   },
 
   fr: {
-    nav: { home: "ACCUEIL", about: "À PROPOS", courses: "COURS", mentors: "MENTORS", contact: "CONTACT", login: "Connexion", signin: "S'inscrire" },
+    nav: { home: "ACCUEIL", about: "À PROPOS", courses: "COURS", mentors: "MENTORS", contact: "CONTACT", dashboard: "Tableau de bord", login: "Connexion", signin: "S'inscrire", logout: "Déconnexion", hi: "Salut", myAccount: "Mon compte" },
     footer: {
       tagline1: "L'ÉDUCATION POUR TOUS",
       tagline2a: "EN UN CLIC",
@@ -581,7 +581,7 @@ export const translations = {
   },
 
   ar: {
-    nav: { home: "الصفحة الرئيسية", about: "من نحن", courses: "الدورات", mentors: "المدرّبون", contact: "اتصل بنا", login: "تسجيل الدخول", signin: "إنشاء حساب" },
+    nav: { home: "الصفحة الرئيسية", about: "من نحن", courses: "الدورات", mentors: "المدرّبون", contact: "اتصل بنا", dashboard: "لوحة التحكم", login: "تسجيل الدخول", signin: "إنشاء حساب", logout: "تسجيل الخروج", hi: "مرحباً", myAccount: "حسابي" },
     footer: {
       tagline1: "نُمكّن التعليم",
       tagline2a: "بنقرة واحدة",

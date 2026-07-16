@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LanguageSwitcher from "./LanguageSwitcher";
+import UserMenu from "./UserMenu";
 import { useI18n } from "@/i18n/I18nProvider";
+import { getSession, logout, AUTH_EVENT, Session } from "@/lib/auth";
 import styles from "./Header.module.css";
 
+// Dashboard isn't a nav link — signed-in users reach it from the profile menu.
 const links = [
   { href: "/", key: "nav.home" },
   { href: "/about", key: "nav.about" },
@@ -17,10 +20,30 @@ const links = [
 
 export default function Header() {
   const pathname = usePathname();
+  const router = useRouter();
   const { t } = useI18n();
   const [open, setOpen] = useState(false);
+  const [session, setSession] = useState<Session | null>(null);
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
+
+  // keep the header in sync with the mock session (login / logout / other tabs)
+  useEffect(() => {
+    const sync = () => setSession(getSession());
+    sync();
+    window.addEventListener(AUTH_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(AUTH_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
+
+  const onLogout = () => {
+    logout();
+    setOpen(false);
+    router.push("/");
+  };
 
   // close the drawer on navigation
   useEffect(() => {
@@ -90,12 +113,18 @@ export default function Header() {
 
           <div className={styles.signIn}>
             <LanguageSwitcher />
-            <Link href="/login" className={styles.loginBtn} onClick={close}>
-              {t("nav.login")}
-            </Link>
-            <Link href="/signup" className={styles.signBtn} onClick={close}>
-              {t("nav.signin")}
-            </Link>
+            {session ? (
+              <UserMenu session={session} onLogout={onLogout} onNavigate={close} />
+            ) : (
+              <>
+                <Link href="/login" className={styles.loginBtn} onClick={close}>
+                  {t("nav.login")}
+                </Link>
+                <Link href="/signup" className={styles.signBtn} onClick={close}>
+                  {t("nav.signin")}
+                </Link>
+              </>
+            )}
           </div>
         </div>
 
