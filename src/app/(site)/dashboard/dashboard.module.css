@@ -360,6 +360,13 @@
   position: relative;
 }
 
+.favCorner {
+  position: absolute;
+  top: 10px;
+  inset-inline-end: 10px;
+  z-index: 2;
+}
+
 .recoBody {
   padding: 18px 20px 20px;
   display: flex;

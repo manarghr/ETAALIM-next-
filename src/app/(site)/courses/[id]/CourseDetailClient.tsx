@@ -5,17 +5,20 @@ import Link from "next/link";
 import {
   Course,
   getRelatedCourses,
-  getLessonsForMajor,
   getJoinOptions,
   formatDate,
   formatTime,
   formatDZD,
 } from "@/data/courses";
+import { getLessons } from "@/data/lessons";
 import { getMentorById, getOtherMentorsInMajor } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
 import { isEnrolled } from "@/lib/enrollment";
 import { categoryAccent } from "@/lib/theme";
 import { useI18n } from "@/i18n/I18nProvider";
+import CourseLearn from "@/components/CourseLearn";
+import CourseReviews from "@/components/CourseReviews";
+import FavoriteButton from "@/components/FavoriteButton";
 import styles from "./page.module.css";
 
 export default function CourseDetailClient({ course }: { course: Course }) {
@@ -28,7 +31,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
   }, [course.id]);
 
   const mentor = getMentorById(course.mentorId);
-  const lessons = getLessonsForMajor(course.major);
+  const lessons = getLessons(course.id, course.major);
   const relatedCourses = getRelatedCourses(course.mentorId, course.id);
   const otherMentors = getOtherMentorsInMajor(course.major, course.mentorId);
   // Deterministic (avoids SSR/client hydration mismatch), pseudo-random 50..2000.
@@ -131,14 +134,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
 
               <div className={styles.panel} id="learn">
                 <h2 className={styles.sectionTitle}>{t("courseDetail.learnTitle")}</h2>
-                <ul className={styles.lessonsList}>
-                  {lessons.map((lesson) => (
-                    <li key={lesson}>
-                      <i className="fa fa-check-circle"></i>
-                      {tr(lesson, locale)}
-                    </li>
-                  ))}
-                </ul>
+                <CourseLearn course={course} enrolled={enrolled} />
               </div>
 
               <div className={styles.panel}>
@@ -198,13 +194,8 @@ export default function CourseDetailClient({ course }: { course: Course }) {
               )}
 
               <div className={styles.panel}>
-                <h2 className={styles.sectionTitle}>{t("courseDetail.commentTitle")}</h2>
-                <form className={styles.commentForm}>
-                  <textarea placeholder={t("courseDetail.commentPlaceholder")}></textarea>
-                  <button type="submit" className="btn btn-primary">
-                    {t("courseDetail.submit")}
-                  </button>
-                </form>
+                <h2 className={styles.sectionTitle}>{t("review.title")}</h2>
+                <CourseReviews course={course} enrolled={enrolled} />
               </div>
             </main>
 
@@ -233,9 +224,6 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                     {formatTime(course.time, locale)}
                   </li>
                   <li>
-                    <i className="fa fa-trophy"></i> {t("courseDetail.certificate")}
-                  </li>
-                  <li>
                     <i className="fa fa-unlock-alt"></i> {t("courseDetail.lifetime")}
                   </li>
                 </ul>
@@ -258,6 +246,9 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                     {t("courseDetail.enrollNow")} <i className="fa fa-arrow-right"></i>
                   </Link>
                 )}
+                <div className={styles.favRow}>
+                  <FavoriteButton courseId={course.id} variant="full" />
+                </div>
               </div>
 
               <div className={styles.sidebarCard}>

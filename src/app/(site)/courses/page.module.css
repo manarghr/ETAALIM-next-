@@ -574,6 +574,13 @@
   overflow: hidden;
 }
 
+.favCorner {
+  position: absolute;
+  bottom: 14px;
+  inset-inline-start: 14px;
+  z-index: 2;
+}
+
 .thumb img {
   width: 100%;
   height: 100%;

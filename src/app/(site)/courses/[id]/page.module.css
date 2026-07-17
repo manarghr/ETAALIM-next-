@@ -343,34 +343,9 @@
   color: rgba(255, 255, 255, 0.7);
 }
 
-/* Comment form */
-.commentForm {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.commentForm textarea {
-  padding: 16px;
-  border-radius: 12px;
-  border: 1px solid var(--line);
-  resize: vertical;
-  min-height: 120px;
-  font-family: "Poppins", "IBM Plex Sans Arabic", sans-serif;
-  font-size: 14px;
-  background: #f8fafc;
-  transition: all 0.25s ease;
-}
-
-.commentForm textarea:focus {
-  outline: none;
-  border-color: var(--navy);
-  box-shadow: 0 0 0 4px rgba(83, 74, 183, 0.08);
-  background: white;
-}
-
-.commentForm button {
-  align-self: flex-start;
+/* Favorite (save) button under the enroll CTA */
+.favRow {
+  margin-top: 12px;
 }
 
 /* Sidebar */

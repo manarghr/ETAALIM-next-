@@ -1,0 +1,335 @@
+/* Progress header */
+.progressHead {
+  margin-bottom: 20px;
+}
+
+.progressText {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.pct {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--primary, #534ab7);
+}
+
+.count {
+  font-size: 13.5px;
+  color: var(--muted, #6b7280);
+}
+
+.track {
+  height: 9px;
+  border-radius: 999px;
+  background: var(--bg-soft, #f1f1f6);
+  overflow: hidden;
+}
+
+.bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6f63d6, #534ab7);
+  transition: width 0.35s ease;
+}
+
+.complete {
+  margin-top: 12px;
+  padding: 11px 14px;
+  border-radius: 12px;
+  background: rgba(29, 158, 117, 0.1);
+  border: 1px solid rgba(29, 158, 117, 0.3);
+  color: #1d7d5f;
+  font-weight: 700;
+  font-size: 14.5px;
+}
+
+.lockedNote {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  background: rgba(224, 138, 74, 0.08);
+  border: 1px solid rgba(224, 138, 74, 0.28);
+  color: #b5691f;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.lockedCta {
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: var(--primary, #534ab7);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13.5px;
+  white-space: nowrap;
+}
+
+/* Lessons list */
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  counter-reset: lesson;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 13px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
+}
+
+.row:hover {
+  border-color: var(--primary, #534ab7);
+  box-shadow: 0 6px 18px rgba(83, 74, 183, 0.1);
+}
+
+.rowLocked {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.rowLocked:hover {
+  border-color: var(--line, #e5e7eb);
+  box-shadow: none;
+}
+
+.rowIcon {
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(83, 74, 183, 0.1);
+  color: var(--primary, #534ab7);
+  font-size: 18px;
+}
+
+.rowDone .rowIcon {
+  background: rgba(29, 158, 117, 0.12);
+  color: #1d9e75;
+}
+
+.rowMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.rowTitle {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--navy, #1e1b4b);
+}
+
+.rowMeta {
+  font-size: 12.5px;
+  color: var(--muted, #6b7280);
+  text-transform: capitalize;
+}
+
+.rowPlay {
+  color: var(--primary, #534ab7);
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+.rowLock {
+  color: var(--muted, #9ca3af);
+  flex-shrink: 0;
+}
+
+.doneTag {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1d9e75;
+  background: rgba(29, 158, 117, 0.12);
+  padding: 4px 11px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.previewTag {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--primary, #534ab7);
+  background: rgba(83, 74, 183, 0.12);
+  padding: 4px 11px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+/* Lesson viewer modal */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  background: rgba(18, 18, 28, 0.55);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  animation: fade 0.2s ease;
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+
+.viewer {
+  width: min(620px, 100%);
+  background: #fff;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(18, 18, 28, 0.3);
+  animation: rise 0.22s ease;
+}
+
+@keyframes rise {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+}
+
+.viewerHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 20px 22px 14px;
+}
+
+.viewerType {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--primary, #534ab7);
+  text-transform: capitalize;
+}
+
+.viewerHead h3 {
+  margin-top: 5px;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--navy, #1e1b4b);
+}
+
+.viewerClose {
+  width: 38px;
+  height: 38px;
+  border: none;
+  background: var(--bg-soft, #f4f4f8);
+  border-radius: 10px;
+  color: var(--navy, #1e1b4b);
+  font-size: 18px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.viewerClose:hover {
+  background: #ececf3;
+}
+
+/* Placeholder "player/reading/quiz" stage */
+.stage {
+  margin: 0 22px;
+  height: 240px;
+  border-radius: 14px;
+  background: radial-gradient(circle at 50% 40%, #2d2b45, #17162a);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.stage i {
+  font-size: 46px;
+  opacity: 0.9;
+}
+
+.stage p {
+  max-width: 380px;
+  font-size: 13.5px;
+  opacity: 0.8;
+  line-height: 1.5;
+}
+
+.viewerActions {
+  display: flex;
+  gap: 12px;
+  padding: 18px 22px 22px;
+}
+
+.doneBtn,
+.nextBtn {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.doneBtn {
+  background: #fff;
+  border: 1.5px solid var(--primary, #534ab7);
+  color: var(--primary, #534ab7);
+}
+
+.doneBtn:hover {
+  background: rgba(83, 74, 183, 0.06);
+}
+
+.doneBtnActive {
+  background: rgba(29, 158, 117, 0.12);
+  border-color: #1d9e75;
+  color: #1d7d5f;
+}
+
+.nextBtn {
+  background: var(--primary, #534ab7);
+  color: #fff;
+}
+
+.nextBtn:hover {
+  background: var(--primary-hover, #443a9e);
+}
+
+@media (max-width: 520px) {
+  .stage {
+    height: 180px;
+  }
+  .viewerActions {
+    flex-direction: column;
+  }
+}

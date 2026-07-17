@@ -19,6 +19,9 @@ import {
 } from "@/data/courses";
 import { getMentorById } from "@/data/mentors";
 import { educationLabel, Cycle } from "@/data/education";
+import { getLessons } from "@/data/lessons";
+import { progressPct } from "@/lib/progress";
+import FavoriteButton from "@/components/FavoriteButton";
 import {
   getStudent,
   isMinor,
@@ -41,6 +44,7 @@ type Mentor = NonNullable<ReturnType<typeof getMentorById>>;
 type Section =
   | "overview"
   | "courses"
+  | "saved"
   | "mentors"
   | "calendar"
   | "wallet"
@@ -49,6 +53,7 @@ type Section =
 const NAV: { key: Section; labelKey: string; icon: string }[] = [
   { key: "overview", labelKey: "dash.navOverview", icon: "fa-th-large" },
   { key: "courses", labelKey: "dash.navCourses", icon: "fa-book" },
+  { key: "saved", labelKey: "dash.navSaved", icon: "fa-star" },
   { key: "mentors", labelKey: "dash.navMentors", icon: "fa-users" },
   { key: "calendar", labelKey: "dash.navSchedule", icon: "fa-calendar" },
   { key: "wallet", labelKey: "dash.navWallet", icon: "fa-money" },
@@ -151,6 +156,10 @@ export default function DashboardClient() {
     .filter((c) => c.tier === "High School")
     .slice(0, 4);
 
+  const savedCourses = student.favoriteCourseIds
+    .map((id) => getCourseById(id))
+    .filter((c): c is Course => Boolean(c));
+
   const pendingConsent = consent.filter((c) => c.status === "pending");
 
   const notifications = [
@@ -191,8 +200,9 @@ export default function DashboardClient() {
 
   const nextSession = sessions[0];
 
-  // deterministic mock progress per course
-  const progressFor = (id: number) => 15 + ((id * 27) % 80);
+  // Real lesson-completion progress (0 until the student starts a course).
+  const progressFor = (c: Course) =>
+    progressPct(c.id, getLessons(c.id, c.major).length);
 
   const priceOf = (c: Course) => getJoinOption(c, "recorded").price;
 
@@ -309,6 +319,8 @@ export default function DashboardClient() {
                     ? notifications.length
                     : item.key === "courses"
                     ? enrolledCourses.length
+                    : item.key === "saved"
+                    ? savedCourses.length
                     : 0;
                 return (
                   <button
@@ -432,6 +444,9 @@ export default function DashboardClient() {
                     <div key={c.id} className={styles.recoCard}>
                       <div className={styles.recoThumb}>
                         <CourseBanner subject={c.major} seed={c.id} />
+                        <div className={styles.favCorner}>
+                          <FavoriteButton courseId={c.id} onChange={reload} />
+                        </div>
                       </div>
                       <div className={styles.recoBody}>
                         <b>{tr(c.subject, locale)}</b>
@@ -487,11 +502,11 @@ export default function DashboardClient() {
                             <div className={styles.progressTrack}>
                               <span
                                 className={styles.progressBar}
-                                style={{ width: `${progressFor(course.id)}%` }}
+                                style={{ width: `${progressFor(course)}%` }}
                               ></span>
                             </div>
                             <span className={styles.progressPct}>
-                              {progressFor(course.id)}%
+                              {progressFor(course)}%
                             </span>
                           </div>
                           <span className={styles.ciNext}>
@@ -505,6 +520,55 @@ export default function DashboardClient() {
                         >
                           {t("dash.continue")} <i className="fa fa-play"></i>
                         </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* -------- Saved / favorites -------- */}
+            {section === "saved" && (
+              <section>
+                <div className={styles.panelHead}>
+                  <h1>{t("dash.savedTitle")}</h1>
+                  <p>{t("dash.savedSub")}</p>
+                </div>
+                {savedCourses.length === 0 ? (
+                  <div className={styles.empty}>
+                    <i className="fa fa-star-o"></i>
+                    <p>{t("dash.savedEmpty")}</p>
+                    <Link href="/courses" className={styles.primaryBtn}>
+                      {t("dash.browseCourses")}
+                    </Link>
+                  </div>
+                ) : (
+                  <div className={styles.recoGrid}>
+                    {savedCourses.map((c) => (
+                      <div key={c.id} className={styles.recoCard}>
+                        <div className={styles.recoThumb}>
+                          <CourseBanner subject={c.major} seed={c.id} />
+                          <div className={styles.favCorner}>
+                            <FavoriteButton courseId={c.id} onChange={reload} />
+                          </div>
+                        </div>
+                        <div className={styles.recoBody}>
+                          <b>{tr(c.subject, locale)}</b>
+                          <span className={styles.recoMeta}>
+                            {mentorName(c.mentorId)}
+                          </span>
+                          <div className={styles.recoFoot}>
+                            <span className={styles.recoPrice}>
+                              {money(priceOf(c))}
+                            </span>
+                            <Link
+                              href={`/courses/${c.id}`}
+                              className={styles.recoLink}
+                            >
+                              {t("dash.view")}
+                            </Link>
+                          </div>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -667,6 +731,9 @@ export default function DashboardClient() {
                     <div key={c.id} className={styles.recoCard}>
                       <div className={styles.recoThumb}>
                         <CourseBanner subject={c.major} seed={c.id} />
+                        <div className={styles.favCorner}>
+                          <FavoriteButton courseId={c.id} onChange={reload} />
+                        </div>
                       </div>
                       <div className={styles.recoBody}>
                         <b>{tr(c.subject, locale)}</b>

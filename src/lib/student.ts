@@ -32,6 +32,7 @@ export interface Student {
   educationExtra?: string; // stream (high) or typed major (university)
   balance: number; // DZD
   followedMentorIds: number[];
+  favoriteCourseIds: number[];
   wallet: WalletTx[];
   joined: string; // ISO
 }
@@ -48,6 +49,7 @@ const DEMO: Student = {
   parentEmail: "parent.cherif@example.com",
   balance: 6000,
   followedMentorIds: [1, 2, 5],
+  favoriteCourseIds: [],
   wallet: [
     {
       id: "seed-topup",
@@ -174,5 +176,17 @@ export function toggleFollow(mentorId: number): Student {
   s.followedMentorIds = s.followedMentorIds.includes(mentorId)
     ? s.followedMentorIds.filter((id) => id !== mentorId)
     : [...s.followedMentorIds, mentorId];
+  return write(s);
+}
+
+export function isFavorite(courseId: number): boolean {
+  return read().favoriteCourseIds.includes(courseId);
+}
+
+export function toggleFavorite(courseId: number): Student {
+  const s = read();
+  s.favoriteCourseIds = s.favoriteCourseIds.includes(courseId)
+    ? s.favoriteCourseIds.filter((id) => id !== courseId)
+    : [...s.favoriteCourseIds, courseId];
   return write(s);
 }

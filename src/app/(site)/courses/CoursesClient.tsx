@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
 import CourseBanner from "@/components/CourseBanner";
+import FavoriteButton from "@/components/FavoriteButton";
 import {
   filterCourses,
   courses,
@@ -364,6 +365,9 @@ export default function CoursesClient({
                       )}
                       <span className={styles.priceTag}>
                         {t("coursesPage.from")} {formatDZD(course.price, locale)}
+                      </span>
+                      <span className={styles.favCorner}>
+                        <FavoriteButton courseId={course.id} />
                       </span>
                     </div>
                     <div className={styles.body}>
