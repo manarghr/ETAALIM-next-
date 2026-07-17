@@ -1,4 +1,5 @@
 import { mentors } from "./mentors";
+import type { Locale } from "@/i18n/translations";
 
 // Algerian education system model.
 // Cycle (tier) → Track (a school year, or a high-school stream) → Courses.
@@ -445,25 +446,48 @@ export function getLessonsForMajor(major: string): string[] {
 }
 
 // ===== Formatting helpers =====
-export function formatDate(iso: string): string {
+// Each takes the active locale so dates/prices read naturally in every language.
+// Algeria writes numbers with Latin digits, so the Arabic locale is pinned to
+// ar-DZ with `latn` rather than the Arabic-Indic default of some ICU builds.
+const BCP47: Record<Locale, string> = {
+  en: "en-US",
+  fr: "fr-FR",
+  ar: "ar-DZ-u-nu-latn",
+};
+
+/** BCP-47 tag for the active locale, for callers doing their own Intl work. */
+export function localeTag(locale: Locale): string {
+  return BCP47[locale];
+}
+
+export function formatDate(iso: string, locale: Locale = "en"): string {
   const d = new Date(iso + "T00:00:00");
-  return d.toLocaleDateString("en-US", {
+  return d.toLocaleDateString(BCP47[locale], {
     month: "short",
     day: "2-digit",
     year: "numeric",
   });
 }
 
-export function formatTime(time: string): string {
+export function formatTime(time: string, locale: Locale = "en"): string {
   const [h, m] = time.split(":").map(Number);
-  const period = h >= 12 ? "PM" : "AM";
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${String(hour12).padStart(2, "0")}:${String(m).padStart(2, "0")} ${period}`;
+  const d = new Date(2000, 0, 1, h, m);
+  return d.toLocaleTimeString(BCP47[locale], {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
-// Algerian Dinar, e.g. 2500 -> "2 500 DA"
-export function formatDZD(amount: number): string {
-  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ") + " DA";
+// Algerian Dinar, e.g. 2500 -> "2 500 DA" / "2 500 دج"
+const DZD_SUFFIX: Record<Locale, string> = { en: "DA", fr: "DA", ar: "دج" };
+
+export function formatDZD(amount: number, locale: Locale = "en"): string {
+  // The thousands separator must be a NO-BREAK SPACE (U+00A0), not a plain
+  // space: Unicode treats it as a number separator, so "6 000" stays one
+  // left-to-right run. With a plain space an RTL page renders it as "000 6".
+  const NBSP = "\u00A0";
+  const digits = amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, NBSP);
+  return `${digits}${NBSP}${DZD_SUFFIX[locale]}`;
 }
 
 // ===== Join / session options =====

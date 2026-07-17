@@ -363,7 +363,7 @@ export default function CoursesClient({
                         </span>
                       )}
                       <span className={styles.priceTag}>
-                        {t("coursesPage.from")} {formatDZD(course.price)}
+                        {t("coursesPage.from")} {formatDZD(course.price, locale)}
                       </span>
                     </div>
                     <div className={styles.body}>

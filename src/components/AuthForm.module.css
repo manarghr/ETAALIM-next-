@@ -253,6 +253,14 @@
   text-decoration: underline;
 }
 
+/* Helper hint under a field (e.g. why a parent's email is needed) */
+.fieldHint {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--muted, #6b7280);
+}
+
 /* Error messages */
 .errorMessage {
   display: none;

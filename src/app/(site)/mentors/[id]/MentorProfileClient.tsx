@@ -182,9 +182,9 @@ export default function MentorProfileClient({ mentor }: { mentor: Mentor }) {
                           <tr key={course.id}>
                             <td>{tr(course.subject, locale)}</td>
                             <td>{tr(course.level, locale)}</td>
-                            <td>{formatDate(course.date)}</td>
+                            <td>{formatDate(course.date, locale)}</td>
                             <td className={styles.price}>
-                              {formatDZD(course.price)}
+                              {formatDZD(course.price, locale)}
                             </td>
                             <td>
                               <Link

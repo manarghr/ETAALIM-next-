@@ -128,13 +128,17 @@
   flex: 1;
 }
 
+/* Both are spans, so they need an explicit block to stack — otherwise the
+   name and description run together on one line. */
 .methodName {
+  display: block;
   color: var(--navy);
   font-weight: 700;
   font-size: 15px;
 }
 
 .methodDesc {
+  display: block;
   color: var(--muted);
   font-size: 13px;
   margin-top: 2px;

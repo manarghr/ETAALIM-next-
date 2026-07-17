@@ -10,11 +10,14 @@ import {
 } from "react";
 import { translations, Locale } from "./translations";
 
+/** Values substituted into a string's {placeholders}. */
+export type TVars = Record<string, string | number>;
+
 interface I18nContextValue {
   locale: Locale;
   dir: "ltr" | "rtl";
   setLocale: (l: Locale) => void;
-  t: (key: string) => string;
+  t: (key: string, vars?: TVars) => string;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -43,19 +46,26 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const t = useCallback(
-    (key: string): string => {
-      const dict = translations[locale] ?? translations.en;
-      const value = key
-        .split(".")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .reduce<any>((obj, k) => (obj == null ? undefined : obj[k]), dict);
-      if (typeof value === "string") return value;
+    (key: string, vars?: TVars): string => {
+      const lookup = (dict: unknown) =>
+        key
+          .split(".")
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          .reduce<any>((obj, k) => (obj == null ? undefined : obj[k]), dict);
+
+      const value = lookup(translations[locale] ?? translations.en);
       // fall back to English, then to the key itself
-      const fallback = key
-        .split(".")
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        .reduce<any>((obj, k) => (obj == null ? undefined : obj[k]), translations.en);
-      return typeof fallback === "string" ? fallback : key;
+      const raw =
+        typeof value === "string" ? value : lookup(translations.en);
+      const str = typeof raw === "string" ? raw : key;
+
+      // Each language places {name}/{count} where its own grammar wants them,
+      // so callers never concatenate sentence fragments.
+      return vars
+        ? str.replace(/\{(\w+)\}/g, (m, k) =>
+            k in vars ? String(vars[k]) : m
+          )
+        : str;
     },
     [locale]
   );

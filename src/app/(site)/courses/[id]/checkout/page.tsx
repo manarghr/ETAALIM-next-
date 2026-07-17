@@ -1,11 +1,6 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import {
-  getCourseById,
-  getJoinOption,
-  mentorName,
-  JoinMode,
-} from "@/data/courses";
+import { getCourseById, getJoinOption, JoinMode } from "@/data/courses";
 import CheckoutClient from "./CheckoutClient";
 
 export async function generateMetadata({
@@ -38,11 +33,7 @@ export default async function CheckoutPage({
     : "recorded";
   const option = getJoinOption(course, mode);
 
-  return (
-    <CheckoutClient
-      course={course}
-      option={option}
-      teacher={mentorName(course.mentorId)}
-    />
-  );
+  // The teacher's display name is derived client-side, where the active
+  // locale decides how the name is rendered.
+  return <CheckoutClient course={course} option={option} />;
 }

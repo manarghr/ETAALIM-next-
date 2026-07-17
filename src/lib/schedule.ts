@@ -9,16 +9,27 @@ export function sessionDateFor(index: number, base: number): Date {
   return new Date(base + OFFSETS_MIN[index % OFFSETS_MIN.length] * 60_000);
 }
 
-/** "in 10 minutes", "in 3 hours", "tomorrow", "in 5 days". */
-export function formatCountdown(target: Date, base: number): string {
+/**
+ * A countdown as data rather than a finished sentence: the caller renders it
+ * through the i18n dictionary ("in 10 minutes" / "خلال 10 دقائق"), so no
+ * English leaks out of this module.
+ */
+export interface Countdown {
+  key: string; // translation key under `cd.*`
+  n: number; // substituted into {n}; 0 when the phrase has no number
+}
+
+export function countdownOf(target: Date, base: number): Countdown {
   const mins = Math.round((target.getTime() - base) / 60_000);
-  if (mins < 1) return "now";
-  if (mins < 60) return `in ${mins} minute${mins === 1 ? "" : "s"}`;
+  if (mins < 1) return { key: "cd.now", n: 0 };
+  if (mins < 60)
+    return { key: mins === 1 ? "cd.minuteOne" : "cd.minuteOther", n: mins };
   const hours = Math.round(mins / 60);
-  if (hours < 24) return `in ${hours} hour${hours === 1 ? "" : "s"}`;
+  if (hours < 24)
+    return { key: hours === 1 ? "cd.hourOne" : "cd.hourOther", n: hours };
   const days = Math.round(hours / 24);
-  if (days === 1) return "tomorrow";
-  return `in ${days} days`;
+  if (days === 1) return { key: "cd.tomorrow", n: 1 };
+  return { key: "cd.dayOther", n: days };
 }
 
 /** true when the session is close enough to warrant a heads-up notification. */
@@ -29,9 +40,9 @@ export function isSoon(target: Date, base: number): boolean {
 
 export interface Discount {
   id: string;
-  title: string;
-  text: string;
-  tag: string; // e.g. "−20%"
+  titleKey: string; // translation keys under `promo.*`
+  textKey: string;
+  tag: string; // e.g. "−20%" — language-neutral
   audience: string; // who it targets
   accent: string; // hex accent
 }
@@ -40,24 +51,24 @@ export interface Discount {
 export const DISCOUNTS: Discount[] = [
   {
     id: "bac",
-    title: "BAC revision pack — 20% off",
-    text: "Intensive 3AS revisions by stream. Offer ends this month.",
+    titleKey: "promo.bacTitle",
+    textKey: "promo.bacText",
     tag: "−20%",
     audience: "3AS",
     accent: "#1d9e75",
   },
   {
     id: "bem",
-    title: "BEM revision pack — 20% off",
-    text: "Targeted 4AM revisions across every core subject.",
+    titleKey: "promo.bemTitle",
+    textKey: "promo.bemText",
     tag: "−20%",
     audience: "4AM",
     accent: "#534ab7",
   },
   {
     id: "backtoschool",
-    title: "Back-to-school — 15% off primary & middle",
-    text: "Give younger students a head start this September.",
+    titleKey: "promo.btsTitle",
+    textKey: "promo.btsText",
     tag: "−15%",
     audience: "Primary · Middle",
     accent: "#e08a2b",

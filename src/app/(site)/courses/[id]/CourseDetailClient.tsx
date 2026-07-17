@@ -74,10 +74,10 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                 <i className="fa fa-graduation-cap"></i> {tr(course.tier, locale)}
               </span>
               <span className={styles.categoryTag}>
-                <i className="fa fa-calendar"></i> {formatDate(course.date)}
+                <i className="fa fa-calendar"></i> {formatDate(course.date, locale)}
               </span>
               <span className={styles.categoryTag}>
-                <i className="fa fa-clock-o"></i> {formatTime(course.time)}
+                <i className="fa fa-clock-o"></i> {formatTime(course.time, locale)}
               </span>
             </div>
           </div>
@@ -115,7 +115,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                       </div>
                       <div className={styles.joinRight}>
                         <span className={styles.joinPrice}>
-                          {formatDZD(opt.price)}
+                          {formatDZD(opt.price, locale)}
                         </span>
                         <Link
                           href={`/courses/${course.id}/checkout?mode=${opt.mode}`}
@@ -212,7 +212,7 @@ export default function CourseDetailClient({ course }: { course: Course }) {
             <aside className={styles.sidebar}>
               <div className={styles.sidebarCard}>
                 <div className={styles.priceRow}>
-                  <span className={styles.amount}>{formatDZD(course.price)}</span>
+                  <span className={styles.amount}>{formatDZD(course.price, locale)}</span>
                   <span className={styles.caption}>{t("courseDetail.priceCaption")}</span>
                 </div>
                 <ul className={styles.includesList}>
@@ -226,11 +226,11 @@ export default function CourseDetailClient({ course }: { course: Course }) {
                     <i className="fa fa-book"></i> {lessons.length} {t("courseDetail.lessonsWord")}
                   </li>
                   <li>
-                    <i className="fa fa-calendar"></i> {formatDate(course.date)}
+                    <i className="fa fa-calendar"></i> {formatDate(course.date, locale)}
                   </li>
                   <li>
                     <i className="fa fa-clock-o"></i> {t("courseDetail.startsAt")}{" "}
-                    {formatTime(course.time)}
+                    {formatTime(course.time, locale)}
                   </li>
                   <li>
                     <i className="fa fa-trophy"></i> {t("courseDetail.certificate")}

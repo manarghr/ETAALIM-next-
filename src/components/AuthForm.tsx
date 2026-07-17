@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
-import { setIdentity } from "@/lib/student";
+import { setIdentity, setSignupProfile } from "@/lib/student";
+import { tr } from "@/data/localized";
+import { CYCLES, YEARS, streamsForYear, Cycle } from "@/data/education";
 import styles from "./AuthForm.module.css";
 
 // Turn "yasmine.cherif" → "Yasmine Cherif" for the display name on login.
@@ -18,16 +20,30 @@ function nameFromEmail(email: string): string {
 }
 
 export default function AuthForm({ mode }: { mode: "login" | "register" }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const router = useRouter();
   const [show, setShow] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [success, setSuccess] = useState(false);
 
+  // Controlled fields that drive the cascading education section + minor check.
+  const [age, setAge] = useState("");
+  const [cycle, setCycle] = useState<Cycle | "">("");
+  const [year, setYear] = useState("");
+
   const toggle = (id: string) => setShow((s) => ({ ...s, [id]: !s[id] }));
 
   const groupClass = (field: string) =>
     `${styles.formGroup} ${errors[field] ? styles.formGroupError : ""}`;
+
+  const ageNum = parseInt(age, 10);
+  const isMinorAge = Number.isFinite(ageNum) && ageNum < 18;
+
+  // Reset the dependent selects when the cycle changes.
+  const onCycleChange = (value: string) => {
+    setCycle(value as Cycle | "");
+    setYear("");
+  };
 
   const handleRegister = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -35,10 +51,24 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     const data = new FormData(form);
     const next: Record<string, boolean> = {};
 
-    const required = ["name", "email", "phone", "major", "level", "password"];
-    required.forEach((f) => {
+    ["name", "email", "phone", "password"].forEach((f) => {
       if (!String(data.get(f) ?? "").trim()) next[f] = true;
     });
+
+    // Age: required, a sensible whole number.
+    if (!Number.isFinite(ageNum) || ageNum < 3 || ageNum > 100) next.age = true;
+    // Minors must give a parent email.
+    if (isMinorAge && !String(data.get("parentEmail") ?? "").trim())
+      next.parentEmail = true;
+
+    // Education: cycle + year always; stream for high school; major for uni.
+    if (!cycle) next.cycle = true;
+    if (cycle && !year) next.year = true;
+    if (cycle === "high" && !String(data.get("stream") ?? "").trim())
+      next.stream = true;
+    if (cycle === "university" && !String(data.get("uniMajor") ?? "").trim())
+      next.uniMajor = true;
+
     const password = String(data.get("password") ?? "");
     const confirm = String(data.get("confirmPassword") ?? "");
     if (password !== confirm) next.confirmPassword = true;
@@ -47,11 +77,29 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    // Mock sign-up: start a session and go to the dashboard (backend later).
     const name = String(data.get("name") ?? "").trim();
     const email = String(data.get("email") ?? "").trim();
+    // `extra` = high-school stream OR typed university major; "" otherwise.
+    const extra =
+      cycle === "high"
+        ? String(data.get("stream") ?? "").trim()
+        : cycle === "university"
+        ? String(data.get("uniMajor") ?? "").trim()
+        : "";
+
+    // Mock sign-up: start a session, persist the profile, go to the dashboard.
     login({ name, email, role: "student" });
-    setIdentity(name, email);
+    setSignupProfile({
+      name,
+      email,
+      age: ageNum,
+      parentEmail: isMinorAge
+        ? String(data.get("parentEmail") ?? "").trim()
+        : "",
+      cycle: cycle as Cycle,
+      year,
+      extra,
+    });
     router.push("/dashboard");
   };
 
@@ -178,32 +226,130 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <div className={styles.errorMessage}>{t("auth.errPhone")}</div>
                 </div>
 
-                <div className={groupClass("major")}>
-                  <label htmlFor="reg-major">{t("auth.major")}</label>
+                <div className={groupClass("age")}>
+                  <label htmlFor="reg-age">{t("auth.age")}</label>
                   <div className={styles.inputWithIcon}>
-                    <i className="fa fa-graduation-cap"></i>
-                    <input type="text" id="reg-major" name="major" placeholder={t("auth.majorPh")} />
+                    <i className="fa fa-birthday-cake"></i>
+                    <input
+                      type="number"
+                      id="reg-age"
+                      name="age"
+                      min={3}
+                      max={100}
+                      placeholder={t("auth.agePh")}
+                      value={age}
+                      onChange={(e) => setAge(e.target.value)}
+                    />
                   </div>
-                  <div className={styles.errorMessage}>{t("auth.errMajor")}</div>
+                  <div className={styles.errorMessage}>{t("auth.errAge")}</div>
                 </div>
 
-                <div className={groupClass("level")}>
-                  <label htmlFor="reg-level">{t("auth.level")}</label>
+                {/* Minors need a parent's email for purchase approvals. */}
+                {isMinorAge && (
+                  <div className={groupClass("parentEmail")}>
+                    <label htmlFor="reg-parent">{t("auth.parentEmail")}</label>
+                    <div className={styles.inputWithIcon}>
+                      <i className="fa fa-shield"></i>
+                      <input
+                        type="email"
+                        id="reg-parent"
+                        name="parentEmail"
+                        placeholder={t("auth.parentEmailPh")}
+                      />
+                    </div>
+                    <p className={styles.fieldHint}>{t("auth.parentEmailHint")}</p>
+                    <div className={styles.errorMessage}>
+                      {t("auth.errParentEmail")}
+                    </div>
+                  </div>
+                )}
+
+                <div className={groupClass("cycle")}>
+                  <label htmlFor="reg-cycle">{t("auth.cycle")}</label>
                   <div className={styles.inputWithIcon}>
-                    <i className="fa fa-signal"></i>
-                    <select id="reg-level" name="level" defaultValue="">
+                    <i className="fa fa-graduation-cap"></i>
+                    <select
+                      id="reg-cycle"
+                      name="cycle"
+                      value={cycle}
+                      onChange={(e) => onCycleChange(e.target.value)}
+                    >
                       <option value="" disabled>
-                        {t("auth.levelSelect")}
+                        {t("auth.cycleSelect")}
                       </option>
-                      <option value="Freshman">{t("auth.lvFreshman")}</option>
-                      <option value="Sophomore">{t("auth.lvSophomore")}</option>
-                      <option value="Junior">{t("auth.lvJunior")}</option>
-                      <option value="Senior">{t("auth.lvSenior")}</option>
-                      <option value="Graduate">{t("auth.lvGraduate")}</option>
+                      {CYCLES.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {t(c.labelKey)}
+                        </option>
+                      ))}
                     </select>
                   </div>
-                  <div className={styles.errorMessage}>{t("auth.errLevel")}</div>
+                  <div className={styles.errorMessage}>{t("auth.errCycle")}</div>
                 </div>
+
+                {/* Year — depends on the chosen cycle */}
+                {cycle && (
+                  <div className={groupClass("year")}>
+                    <label htmlFor="reg-year">{t("auth.yearLabel")}</label>
+                    <div className={styles.inputWithIcon}>
+                      <i className="fa fa-calendar"></i>
+                      <select
+                        id="reg-year"
+                        name="year"
+                        value={year}
+                        onChange={(e) => setYear(e.target.value)}
+                      >
+                        <option value="" disabled>
+                          {t("auth.yearSelect")}
+                        </option>
+                        {YEARS[cycle].map((y) => (
+                          <option key={y} value={y}>
+                            {y}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.errorMessage}>{t("auth.errYear")}</div>
+                  </div>
+                )}
+
+                {/* High school — stream, filtered by the chosen year */}
+                {cycle === "high" && year && (
+                  <div className={groupClass("stream")}>
+                    <label htmlFor="reg-stream">{t("auth.stream")}</label>
+                    <div className={styles.inputWithIcon}>
+                      <i className="fa fa-flask"></i>
+                      <select id="reg-stream" name="stream" defaultValue="">
+                        <option value="" disabled>
+                          {t("auth.streamSelect")}
+                        </option>
+                        {streamsForYear(year).map((s) => (
+                          <option key={s} value={s}>
+                            {tr(s, locale)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.errorMessage}>{t("auth.errStream")}</div>
+                  </div>
+                )}
+
+                {/* University — typed major */}
+                {cycle === "university" && (
+                  <div className={groupClass("uniMajor")}>
+                    <label htmlFor="reg-unimajor">{t("auth.uniMajorLabel")}</label>
+                    <div className={styles.inputWithIcon}>
+                      <i className="fa fa-book"></i>
+                      <input
+                        type="text"
+                        id="reg-unimajor"
+                        name="uniMajor"
+                        placeholder={t("auth.uniMajorPh")}
+                      />
+                    </div>
+                    <div className={styles.errorMessage}>{t("auth.errUniMajor")}</div>
+                  </div>
+                )}
 
                 <div className={groupClass("password")}>
                   <label htmlFor="reg-password">{t("auth.passwordLabel")}</label>

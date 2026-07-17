@@ -5,7 +5,14 @@ export interface WalletTx {
   id: string;
   type: "topup" | "purchase";
   amount: number; // DZD, always positive
-  label: string;
+  /**
+   * Course subject for purchases (topups have none). We store the English
+   * subject rather than a finished label so the row re-renders in whatever
+   * language is active — a stored sentence would stay frozen in one language.
+   */
+  subject?: string;
+  /** Legacy English label from sessions stored before the i18n change. */
+  label?: string;
   date: string; // ISO
 }
 
@@ -14,9 +21,15 @@ export interface Student {
   name: string;
   email: string;
   initials: string;
-  grade: string;
+  grade: string; // legacy display string; new signups use the education* fields
   age: number;
   parentEmail: string;
+  // Structured education captured at signup (Algerian system). Optional so the
+  // demo seed and older records still work; the dashboard composes a localized
+  // label from these when present, else falls back to `grade`.
+  educationCycle?: string; // "primary" | "middle" | "high" | "university"
+  educationYear?: string; // "3AS", "5AP", "L2", …
+  educationExtra?: string; // stream (high) or typed major (university)
   balance: number; // DZD
   followedMentorIds: number[];
   wallet: WalletTx[];
@@ -40,7 +53,6 @@ const DEMO: Student = {
       id: "seed-topup",
       type: "topup",
       amount: 6000,
-      label: "Wallet top-up · BaridiMob",
       date: "2026-07-10T10:00:00.000Z",
     },
   ],
@@ -80,17 +92,45 @@ export function getStudent(): Student {
   return read();
 }
 
+function initialsOf(name: string): string {
+  return (name || "S")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+}
+
 /** Sync the profile name/email from the logged-in session. */
 export function setIdentity(name: string, email: string): Student {
   const s = read();
   if (name) s.name = name;
   if (email) s.email = email;
-  s.initials = (s.name || "S")
-    .split(" ")
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join("")
-    .toUpperCase();
+  s.initials = initialsOf(s.name);
+  return write(s);
+}
+
+/** Full profile captured at sign-up: identity, age, and Algerian education. */
+export function setSignupProfile(p: {
+  name: string;
+  email: string;
+  age: number;
+  parentEmail?: string;
+  cycle: string;
+  year: string;
+  extra: string;
+}): Student {
+  const s = read();
+  s.name = p.name || s.name;
+  s.email = p.email || s.email;
+  s.age = p.age;
+  // Only minors need a parent email; keep any existing one otherwise.
+  if (p.parentEmail) s.parentEmail = p.parentEmail;
+  s.educationCycle = p.cycle;
+  s.educationYear = p.year;
+  s.educationExtra = p.extra;
+  s.initials = initialsOf(s.name);
   return write(s);
 }
 
@@ -98,23 +138,32 @@ export function isMinor(s: Student): boolean {
   return s.age < 18;
 }
 
-export function addFunds(amount: number, label = "Wallet top-up"): Student {
+export function addFunds(amount: number): Student {
   const s = read();
   s.balance += amount;
   s.wallet = [
-    { id: uid(), type: "topup", amount, label, date: new Date().toISOString() },
+    { id: uid(), type: "topup", amount, date: new Date().toISOString() },
     ...s.wallet,
   ];
   return write(s);
 }
 
-/** Deduct from the wallet. Returns the updated student, or null if insufficient. */
-export function chargeWallet(amount: number, label: string): Student | null {
+/**
+ * Deduct from the wallet. `subject` is the English course subject, translated
+ * at render time. Returns the updated student, or null if insufficient.
+ */
+export function chargeWallet(amount: number, subject: string): Student | null {
   const s = read();
   if (s.balance < amount) return null;
   s.balance -= amount;
   s.wallet = [
-    { id: uid(), type: "purchase", amount, label, date: new Date().toISOString() },
+    {
+      id: uid(),
+      type: "purchase",
+      amount,
+      subject,
+      date: new Date().toISOString(),
+    },
     ...s.wallet,
   ];
   return write(s);

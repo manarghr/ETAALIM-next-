@@ -42,7 +42,7 @@ const featuredMentors = mentors.slice(0, 5);
 const heroAvatars = mentors.slice(0, 4).map((m) => m.profilePicture);
 
 export default function Home() {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
 
   const features = [1, 2, 3, 4, 5, 6].map((n, i) => ({
     icon: featureIcons[i],
@@ -218,7 +218,7 @@ export default function Home() {
                     <span className={styles.courseChip} style={cssVars(categoryAccent(course.major))}>
                       {course.major}
                     </span>
-                    <span className={styles.coursePriceTag}>{formatDZD(course.price)}</span>
+                    <span className={styles.coursePriceTag}>{formatDZD(course.price, locale)}</span>
                   </div>
                   <div className={styles.courseBody}>
                     <h3>{course.subject}</h3>

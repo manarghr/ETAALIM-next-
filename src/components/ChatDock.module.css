@@ -1,0 +1,328 @@
+.dock {
+  position: fixed;
+  bottom: 0;
+  inset-inline-end: 28px;
+  width: 366px;
+  max-width: calc(100vw - 32px);
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-bottom: none;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -8px 40px rgba(18, 18, 28, 0.22);
+  z-index: 1350;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dockRise 0.28s ease;
+}
+
+@keyframes dockRise {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+}
+
+/* `inset-inline-end` already flips to the left edge under [dir="rtl"], so the
+   dock mirrors to the bottom-left in Arabic with no extra rule. */
+
+/* ===== Header (also the minimized "banner") ===== */
+.head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 12px;
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.5);
+  flex-shrink: 0;
+}
+
+.headInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.headInfo b {
+  font-size: 14.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headInfo span {
+  font-size: 12px;
+  opacity: 0.85;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.headActions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: #fff;
+  border-radius: 8px;
+  font-size: 17px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease;
+}
+
+.iconBtn:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ===== Thread ===== */
+.thread {
+  height: 340px;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  background: #f7f7fb;
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  color: var(--muted, #6b7280);
+  font-size: 13.5px;
+  padding: 0 20px;
+}
+
+.bubble {
+  max-width: 82%;
+  padding: 9px 12px;
+  border-radius: 15px;
+  font-size: 14px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  word-break: break-word;
+}
+
+.bubbleText {
+  white-space: pre-wrap;
+}
+
+.mine {
+  align-self: flex-end;
+  background: var(--primary, #534ab7);
+  color: #fff;
+  border-bottom-right-radius: 5px;
+}
+
+.theirs {
+  align-self: flex-start;
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  color: var(--navy, #1e1b4b);
+  border-bottom-left-radius: 5px;
+}
+
+/* Attachments inside a bubble */
+.attachImg {
+  display: block;
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.attachFile {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.06);
+  color: inherit;
+  text-decoration: none;
+  max-width: 240px;
+}
+
+.mine .attachFile {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+.attachFile i {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.attachName {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.attachSize {
+  font-size: 11px;
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+/* ===== Pending attachment preview ===== */
+.pending {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--line, #e5e7eb);
+  background: var(--bg-soft, #f4f4f8);
+}
+
+.pendingThumb {
+  width: 34px;
+  height: 34px;
+  border-radius: 7px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.pendingIcon {
+  font-size: 20px;
+  color: var(--primary, #534ab7);
+  flex-shrink: 0;
+}
+
+.pendingName {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--navy, #1e1b4b);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pendingRemove {
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--muted, #6b7280);
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.pendingRemove:hover {
+  background: rgba(0, 0, 0, 0.08);
+  color: #dc3545;
+}
+
+.sizeError {
+  padding: 8px 14px;
+  background: rgba(220, 53, 69, 0.08);
+  color: #dc3545;
+  font-size: 12.5px;
+  border-top: 1px solid rgba(220, 53, 69, 0.2);
+}
+
+/* ===== Composer ===== */
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--line, #e5e7eb);
+  background: #fff;
+}
+
+.attachBtn,
+.sendBtn {
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  font-size: 16px;
+  display: grid;
+  place-items: center;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.attachBtn {
+  background: transparent;
+  color: var(--muted, #6b7280);
+}
+
+.attachBtn:hover {
+  background: var(--bg-soft, #f4f4f8);
+  color: var(--primary, #534ab7);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
+  background: #f8fafc;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary, #534ab7);
+  background: #fff;
+}
+
+.sendBtn {
+  background: var(--primary, #534ab7);
+  color: #fff;
+}
+
+.sendBtn:hover:not(:disabled) {
+  background: var(--primary-hover, #443a9e);
+}
+
+.sendBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (max-width: 520px) {
+  .dock {
+    inset-inline-end: 0;
+    inset-inline-start: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 14px 14px 0 0;
+  }
+  .thread {
+    height: 300px;
+  }
+}

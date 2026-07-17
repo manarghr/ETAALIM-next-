@@ -44,6 +44,20 @@ const DICT: Record<string, Tr> = {
   "Available": { fr: "Disponible", ar: "متاح" },
   "Upcoming": { fr: "À venir", ar: "قريباً" },
 
+  // ---- Student grade (dashboard profile) ----
+  "3AS · Experimental Sciences": {
+    fr: "3AS · Sciences expérimentales",
+    ar: "الثالثة ثانوي · علوم تجريبية",
+  },
+
+  // ---- High-school streams (Algerian lycée) ----
+  "Common Core Science": { fr: "Tronc commun sciences", ar: "جذع مشترك علوم" },
+  "Common Core Arts": { fr: "Tronc commun lettres", ar: "جذع مشترك آداب" },
+  "Experimental Sciences": { fr: "Sciences expérimentales", ar: "علوم تجريبية" },
+  "Technical Mathematics": { fr: "Mathématiques technique", ar: "تقني رياضي" },
+  "Management & Economics": { fr: "Gestion et économie", ar: "تسيير واقتصاد" },
+  "Literature & Philosophy": { fr: "Lettres et philosophie", ar: "آداب وفلسفة" },
+
   // ---- Course subjects ----
   "Arabic Language": { fr: "Langue arabe", ar: "اللغة العربية" },
   "Primary Mathematics": { fr: "Mathématiques du primaire", ar: "رياضيات الابتدائي" },

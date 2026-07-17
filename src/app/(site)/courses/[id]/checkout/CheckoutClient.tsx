@@ -3,7 +3,10 @@
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { Course, JoinOption, formatDZD } from "@/data/courses";
+import { getMentorById } from "@/data/mentors";
+import { tr, mentorDisplayName } from "@/data/localized";
 import { addEnrollment } from "@/lib/enrollment";
+import { useI18n } from "@/i18n/I18nProvider";
 import CourseBanner from "@/components/CourseBanner";
 import styles from "./page.module.css";
 
@@ -12,16 +15,21 @@ type Method = "baridimob" | "cib";
 export default function CheckoutClient({
   course,
   option,
-  teacher,
 }: {
   course: Course;
   option: JoinOption;
-  teacher: string;
 }) {
+  const { t, locale } = useI18n();
   const [method, setMethod] = useState<Method>("baridimob");
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [orderRef, setOrderRef] = useState("");
+
+  const mentor = getMentorById(course.mentorId);
+  const teacher = mentor ? mentorDisplayName(mentor, locale) : "";
+  const subject = tr(course.subject, locale);
+  const optionTitle = tr(option.title, locale);
+  const price = formatDZD(option.price, locale);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -51,21 +59,20 @@ export default function CheckoutClient({
             <div className={styles.successIcon}>
               <i className="fa fa-check"></i>
             </div>
-            <h2>Thank you!</h2>
-            <p>
-              You&apos;re enrolled in <b>{course.subject}</b> — {option.title}.
-            </p>
+            <h2>{t("checkout.thankYou")}</h2>
+            <p>{t("checkout.enrolledIn", { course: subject, option: optionTitle })}</p>
             <p className={styles.unlockNote}>
-              <i className="fa fa-unlock-alt"></i> This course is now unlocked —
-              a confirmation is on its way to your email.
+              <i className="fa fa-unlock-alt"></i> {t("checkout.unlockNote")}
             </p>
-            <div className={styles.orderRef}>Order {orderRef}</div>
+            <div className={styles.orderRef}>
+              {t("checkout.orderRef", { ref: orderRef })}
+            </div>
             <div className={styles.successActions}>
               <Link href={`/courses/${course.id}`} className="btn btn-primary">
-                Back to course <i className="fa fa-arrow-right"></i>
+                {t("checkout.backToCourse")} <i className="fa fa-arrow-right"></i>
               </Link>
               <Link href="/courses" className="btn btn-secondary">
-                Browse more courses
+                {t("checkout.browseMore")}
               </Link>
             </div>
           </div>
@@ -78,19 +85,17 @@ export default function CheckoutClient({
     <div className={styles.wrap}>
       <div className="container">
         <Link href={`/courses/${course.id}`} className={styles.back}>
-          <i className="fa fa-angle-left"></i> Back to course
+          <i className="fa fa-angle-left"></i> {t("checkout.back")}
         </Link>
 
-        <h1 className={styles.heading}>Checkout</h1>
-        <p className={styles.subheading}>
-          Complete your enrollment with a secure Algerian payment method.
-        </p>
+        <h1 className={styles.heading}>{t("checkout.title")}</h1>
+        <p className={styles.subheading}>{t("checkout.subtitle")}</p>
 
         <div className={styles.layout}>
           {/* Payment column */}
           <form onSubmit={handleSubmit}>
             <div className={styles.panel}>
-              <h2 className={styles.panelTitle}>Payment method</h2>
+              <h2 className={styles.panelTitle}>{t("checkout.methodTitle")}</h2>
               <div className={styles.methodList}>
                 <label
                   className={`${styles.methodCard} ${
@@ -109,9 +114,11 @@ export default function CheckoutClient({
                     <i className="fa fa-mobile"></i>
                   </span>
                   <span className={styles.methodInfo}>
-                    <span className={styles.methodName}>BaridiMob</span>
+                    <span className={styles.methodName}>
+                      {t("checkout.baridiName")}
+                    </span>
                     <span className={styles.methodDesc}>
-                      Algérie Poste mobile payment (CCP / RIP)
+                      {t("checkout.baridiDesc")}
                     </span>
                   </span>
                 </label>
@@ -133,10 +140,8 @@ export default function CheckoutClient({
                     <i className="fa fa-credit-card"></i>
                   </span>
                   <span className={styles.methodInfo}>
-                    <span className={styles.methodName}>CIB / Edahabia Card</span>
-                    <span className={styles.methodDesc}>
-                      Pay with your national interbank card
-                    </span>
+                    <span className={styles.methodName}>{t("checkout.cibName")}</span>
+                    <span className={styles.methodDesc}>{t("checkout.cibDesc")}</span>
                   </span>
                 </label>
               </div>
@@ -146,7 +151,7 @@ export default function CheckoutClient({
                 <>
                   <div className={styles.fields}>
                     <div className={styles.field}>
-                      <label htmlFor="ccp">CCP / RIP number</label>
+                      <label htmlFor="ccp">{t("checkout.ccpLabel")}</label>
                       <input
                         id="ccp"
                         type="text"
@@ -155,7 +160,7 @@ export default function CheckoutClient({
                       />
                     </div>
                     <div className={styles.field}>
-                      <label htmlFor="phone">Phone number</label>
+                      <label htmlFor="phone">{t("checkout.phoneLabel")}</label>
                       <input
                         id="phone"
                         type="tel"
@@ -166,16 +171,13 @@ export default function CheckoutClient({
                   </div>
                   <div className={styles.hint}>
                     <i className="fa fa-info-circle"></i>
-                    <span>
-                      After confirming, you&apos;ll receive a payment request in
-                      your BaridiMob app. Approve it to complete your enrollment.
-                    </span>
+                    <span>{t("checkout.baridiHint")}</span>
                   </div>
                 </>
               ) : (
                 <div className={styles.fields}>
                   <div className={styles.field}>
-                    <label htmlFor="card">Card number</label>
+                    <label htmlFor="card">{t("checkout.cardLabel")}</label>
                     <input
                       id="card"
                       type="text"
@@ -185,16 +187,21 @@ export default function CheckoutClient({
                     />
                   </div>
                   <div className={styles.field}>
-                    <label htmlFor="holder">Cardholder name</label>
-                    <input id="holder" type="text" placeholder="Full name" required />
+                    <label htmlFor="holder">{t("checkout.holderLabel")}</label>
+                    <input
+                      id="holder"
+                      type="text"
+                      placeholder={t("checkout.holderPh")}
+                      required
+                    />
                   </div>
                   <div className={styles.row}>
                     <div className={styles.field}>
-                      <label htmlFor="exp">Expiry</label>
+                      <label htmlFor="exp">{t("checkout.expLabel")}</label>
                       <input id="exp" type="text" placeholder="MM / YY" required />
                     </div>
                     <div className={styles.field}>
-                      <label htmlFor="cvv">CVV</label>
+                      <label htmlFor="cvv">{t("checkout.cvvLabel")}</label>
                       <input id="cvv" type="text" inputMode="numeric" placeholder="123" required />
                     </div>
                   </div>
@@ -206,49 +213,47 @@ export default function CheckoutClient({
                 className={`btn btn-primary ${styles.payBtn}`}
                 disabled={submitting}
               >
-                {submitting ? (
-                  "Processing..."
-                ) : (
-                  <>
-                    Pay {formatDZD(option.price)}
-                  </>
-                )}
+                {submitting
+                  ? t("checkout.processing")
+                  : t("checkout.pay", { amount: price })}
               </button>
               <p className={styles.secure}>
-                <i className="fa fa-lock"></i> Payments are secure and processed
-                in Algerian Dinar (DZD).
+                <i className="fa fa-lock"></i> {t("checkout.secure")}
               </p>
             </div>
           </form>
 
           {/* Order summary */}
           <aside className={styles.summary}>
-            <h3>Order summary</h3>
+            <h3>{t("checkout.summary")}</h3>
             <div className={styles.courseLine}>
               <div className={styles.courseThumb}>
                 <CourseBanner subject={course.major} seed={course.id} />
               </div>
               <div>
-                <div className={styles.cName}>{course.subject}</div>
+                <div className={styles.cName}>{subject}</div>
                 <div className={styles.cMeta}>
-                  {course.tier} · with {teacher}
+                  {t("checkout.summaryMeta", {
+                    tier: tr(course.tier, locale),
+                    teacher,
+                  })}
                 </div>
                 <span className={styles.optionPill}>
-                  <i className={`fa ${option.icon}`}></i> {option.title}
+                  <i className={`fa ${option.icon}`}></i> {optionTitle}
                 </span>
               </div>
             </div>
             <div className={styles.sumRow}>
-              <span>{option.title}</span>
-              <span>{formatDZD(option.price)}</span>
+              <span>{optionTitle}</span>
+              <span>{price}</span>
             </div>
             <div className={styles.sumRow}>
-              <span>Platform fee</span>
-              <span>0 DA</span>
+              <span>{t("checkout.platformFee")}</span>
+              <span>{formatDZD(0, locale)}</span>
             </div>
             <div className={styles.sumTotal}>
-              <span className={styles.tLabel}>Total</span>
-              <span className={styles.tValue}>{formatDZD(option.price)}</span>
+              <span className={styles.tLabel}>{t("checkout.total")}</span>
+              <span className={styles.tValue}>{price}</span>
             </div>
           </aside>
         </div>
