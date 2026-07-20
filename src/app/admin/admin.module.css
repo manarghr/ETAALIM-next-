@@ -1,0 +1,391 @@
+.wrap {
+  padding: 40px 0 100px;
+}
+
+.container {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 40px;
+}
+
+/* ===== Password gate ===== */
+.gateWrap {
+  min-height: 70vh;
+  display: grid;
+  place-items: center;
+  padding: 40px 20px;
+}
+
+.gateCard {
+  width: min(420px, 100%);
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 20px;
+  padding: 36px 32px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(83, 74, 183, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gateIcon {
+  width: 62px;
+  height: 62px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  color: var(--primary, #534ab7);
+  background: rgba(83, 74, 183, 0.12);
+  margin-bottom: 18px;
+}
+
+.gateCard h1 {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--navy, #1e1b4b);
+}
+
+.gateCard p {
+  margin-top: 8px;
+  font-size: 14.5px;
+  color: var(--muted, #6b7280);
+}
+
+.gateField {
+  width: 100%;
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1.5px solid var(--line, #e5e7eb);
+  border-radius: 12px;
+  background: #fafafb;
+  transition: border-color 0.2s ease;
+}
+
+.gateField:focus-within {
+  border-color: var(--primary, #534ab7);
+  background: #fff;
+}
+
+.gateField i {
+  color: var(--muted, #9ca3af);
+}
+
+.gateField input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 13px 0;
+  font-family: inherit;
+  font-size: 15px;
+  outline: none;
+}
+
+.gateError {
+  border-color: #dc3545;
+}
+
+.gateMsg {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #dc3545;
+}
+
+.gateBtn {
+  width: 100%;
+  margin-top: 18px;
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  background: var(--primary, #534ab7);
+  color: #fff;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.gateBtn:hover {
+  background: var(--primary-hover, #443a9e);
+}
+
+.gateHint {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--muted, #9ca3af);
+}
+
+/* ===== Overview ===== */
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 28px;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--primary, #534ab7);
+}
+
+.head h1 {
+  margin-top: 8px;
+  font-size: 33px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--navy, #1e1b4b);
+}
+
+.head p {
+  margin-top: 6px;
+  font-size: 16px;
+  color: var(--muted, #6b7280);
+}
+
+.lockBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 18px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--navy, #1e1b4b);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.lockBtn:hover {
+  border-color: var(--primary, #534ab7);
+  color: var(--primary, #534ab7);
+}
+
+/* stat cards */
+.statGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 18px;
+}
+
+.statCard {
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 18px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 6px 20px rgba(83, 74, 183, 0.04);
+}
+
+.statIcon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.statValue {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--navy, #1e1b4b);
+  line-height: 1.1;
+}
+
+.statLabel {
+  font-size: 13px;
+  color: var(--muted, #6b7280);
+}
+
+.blockTitle {
+  margin: 40px 0 18px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy, #1e1b4b);
+}
+
+/* tables */
+.tableWrap {
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 16px;
+  overflow-x: auto;
+}
+
+.scrollTable {
+  max-height: 460px;
+  overflow-y: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 640px;
+}
+
+.table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-soft, #f7f7fb);
+  text-align: start;
+  padding: 14px 18px;
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: var(--muted, #6b7280);
+  white-space: nowrap;
+}
+
+.table tbody td {
+  padding: 14px 18px;
+  font-size: 14px;
+  color: var(--navy, #1e1b4b);
+  border-top: 1px solid var(--line, #eee);
+  white-space: nowrap;
+}
+
+.table tbody tr:hover {
+  background: rgba(83, 74, 183, 0.03);
+}
+
+.mentorCell {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.mentorCell img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.mentorCell span {
+  font-weight: 600;
+}
+
+.price {
+  font-weight: 700;
+  color: var(--primary, #534ab7);
+}
+
+.rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-weight: 700;
+  color: #b57814;
+}
+
+.rating i {
+  color: #f5a623;
+}
+
+.badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.bAvail {
+  background: rgba(29, 158, 117, 0.12);
+  color: #1d7d5f;
+}
+
+.bUpcoming {
+  background: rgba(224, 138, 74, 0.14);
+  color: #b5691f;
+}
+
+/* latest reviews */
+.reviewList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.reviewCard {
+  display: flex;
+  gap: 13px;
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 14px;
+  padding: 16px 18px;
+}
+
+.reviewAvatar {
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
+  color: #fff;
+  font-weight: 700;
+}
+
+.reviewBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.reviewTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.reviewTop b {
+  font-size: 14.5px;
+  color: var(--navy, #1e1b4b);
+}
+
+.reviewText {
+  margin-top: 5px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text, #374151);
+}
+
+.reviewCourse {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted, #9ca3af);
+}
+
+@media (max-width: 1100px) {
+  .statGrid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .container {
+    padding: 0 20px;
+  }
+  .statGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .reviewList {
+    grid-template-columns: 1fr;
+  }
+}
