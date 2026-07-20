@@ -86,7 +86,7 @@ export default function UserMenu({
         <div className={styles.divider}></div>
 
         <Link
-          href="/dashboard"
+          href={session.role === "mentor" ? "/mentor-dashboard" : "/dashboard"}
           className={styles.item}
           role="menuitem"
           onClick={() => {

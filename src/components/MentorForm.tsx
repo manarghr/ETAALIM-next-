@@ -2,7 +2,10 @@
 
 import { useState, FormEvent, ChangeEvent, KeyboardEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
+import { login } from "@/lib/auth";
+import { registerMentor } from "@/lib/mentor";
 import s from "./AuthForm.module.css";
 import m from "./MentorForm.module.css";
 
@@ -10,9 +13,9 @@ import m from "./MentorForm.module.css";
 // identical to sign-in, plus a few mentor-specific widgets (m.*).
 export default function MentorForm() {
   const { t } = useI18n();
+  const router = useRouter();
   const [show, setShow] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
-  const [success, setSuccess] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [experience, setExperience] = useState(0);
   const [skills, setSkills] = useState<string[]>([]);
@@ -60,13 +63,23 @@ export default function MentorForm() {
     setErrors(next);
     if (Object.keys(next).length > 0) return;
 
-    // Backend wiring comes later; show the success confirmation for now.
-    setSuccess(true);
-    form.reset();
-    setPhoto(null);
-    setExperience(0);
-    setSkills([]);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    // For the demo we onboard the professor straight away (no email review /
+    // verification gate). Create their mentor account, start a session, and
+    // drop them into their dashboard. Real verification lands with the backend.
+    const name = String(data.get("name") ?? "").trim();
+    const email = String(data.get("email") ?? "").trim();
+    const account = registerMentor({
+      name,
+      email,
+      phone: String(data.get("phone") ?? "").trim(),
+      expertise: String(data.get("expertise") ?? "").trim(),
+      level: String(data.get("level") ?? "").trim(),
+      experience,
+      skills,
+      photo,
+    });
+    login({ name: account.name, email: account.email, role: "mentor" });
+    router.push("/mentor-dashboard");
   };
 
   return (
@@ -87,13 +100,6 @@ export default function MentorForm() {
               <h1>{t("mentorForm.title")}</h1>
               <p>{t("mentorForm.subtitle")}</p>
             </div>
-
-            {success && (
-              <div className={s.success}>
-                <i className="fa fa-check-circle"></i>
-                {t("mentorForm.successMsg")}
-              </div>
-            )}
 
             <form className={s.form} onSubmit={handleSubmit} noValidate>
               {/* Profile photo */}

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
 import { setIdentity, setSignupProfile } from "@/lib/student";
+import { setActiveMentor, isMentorEmail } from "@/lib/mentor";
 import { tr } from "@/data/localized";
 import { CYCLES, YEARS, streamsForYear, Cycle } from "@/data/education";
 import styles from "./AuthForm.module.css";
@@ -107,8 +108,16 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     e.preventDefault();
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") ?? "").trim();
+
+    // Mock login: role is inferred from the email (mentor addresses land on the
+    // mentor dashboard), then start a session and route accordingly.
+    if (isMentorEmail(email)) {
+      const account = setActiveMentor(email);
+      login({ name: account.name, email: account.email, role: "mentor" });
+      router.push("/mentor-dashboard");
+      return;
+    }
     const name = nameFromEmail(email);
-    // Mock login: start a session and go to the dashboard (backend later).
     login({ name, email, role: "student" });
     setIdentity(name, email);
     router.push("/dashboard");
