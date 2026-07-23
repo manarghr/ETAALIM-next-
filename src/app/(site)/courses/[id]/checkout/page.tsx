@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getCourseById, getJoinOption, JoinMode } from "@/data/courses";
 import CheckoutClient from "./CheckoutClient";
+import CheckoutResolver from "./CheckoutResolver";
 
 export async function generateMetadata({
   params,
@@ -24,13 +24,17 @@ export default async function CheckoutPage({
 }) {
   const { id } = await params;
   const sp = await searchParams;
-  const course = getCourseById(parseInt(id, 10));
-  if (!course) redirect("/courses");
+  const courseId = parseInt(id, 10);
+  const course = getCourseById(courseId);
 
   const modeParam = Array.isArray(sp.mode) ? sp.mode[0] : sp.mode;
   const mode: JoinMode = VALID_MODES.includes(modeParam as JoinMode)
     ? (modeParam as JoinMode)
     : "recorded";
+
+  // Admin-created courses only exist client-side — resolve there.
+  if (!course) return <CheckoutResolver id={courseId} mode={mode} />;
+
   const option = getJoinOption(course, mode);
 
   // The teacher's display name is derived client-side, where the active

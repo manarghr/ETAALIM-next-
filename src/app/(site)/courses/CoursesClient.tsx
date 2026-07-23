@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
 import CourseBanner from "@/components/CourseBanner";
 import FavoriteButton from "@/components/FavoriteButton";
 import {
-  filterCourses,
   courses,
   TIERS,
   Tier,
@@ -18,6 +17,7 @@ import {
   getTrack,
   formatDZD,
 } from "@/data/courses";
+import { effectiveCourses } from "@/lib/catalog";
 import { getMentorById } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
 import { cssVars, categoryAccent } from "@/lib/theme";
@@ -64,6 +64,14 @@ export default function CoursesClient({
   const [search, setSearch] = useState(() => first(sp.search));
   const [page, setPage] = useState(1);
 
+  // SSR renders the static catalog; on mount swap to the effective one (the
+  // admin's edits, deletions and additions — stored client-side).
+  const [catalog, setCatalog] = useState<Course[]>(courses);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCatalog(effectiveCourses());
+  }, []);
+
   // Resolve the current position inside the active tier's drill-down tree.
   const chain = tierFilter ? resolveNavPath(tierFilter as Tier, navPath) : [];
   const deepest = chain[chain.length - 1];
@@ -90,7 +98,19 @@ export default function CoursesClient({
 
   // Courses shown = union of every leaf track under the deepest selected node.
   const activeTracks = deepest ? leafTracks(deepest) : [];
-  const filtered = filterCourses({ search, tier: tierFilter, tracks: activeTracks });
+  const q = search.trim().toLowerCase();
+  const filtered = catalog.filter((c) => {
+    if (tierFilter !== "" && tierFilter !== "All" && c.tier !== tierFilter) return false;
+    if (activeTracks.length > 0 && !activeTracks.includes(c.track)) return false;
+    if (
+      q !== "" &&
+      !c.subject.toLowerCase().includes(q) &&
+      !c.major.toLowerCase().includes(q)
+    ) {
+      return false;
+    }
+    return true;
+  });
   const totalCourses = filtered.length;
   const totalPages = Math.ceil(totalCourses / COURSES_PER_PAGE);
   const safePage = Math.min(page, Math.max(totalPages, 1));
@@ -152,7 +172,7 @@ export default function CoursesClient({
                   </span>
                   <span className={styles.tierLabel}>{tr(tier, locale)}</span>
                   <span className={styles.tierCount}>
-                    {courses.filter((c) => c.tier === tier).length}{" "}
+                    {catalog.filter((c) => c.tier === tier).length}{" "}
                     {t("coursesPage.coursesWord")}
                   </span>
                 </button>

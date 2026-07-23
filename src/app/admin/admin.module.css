@@ -1,5 +1,10 @@
 .wrap {
   padding: 40px 0 100px;
+  min-height: 100vh;
+  /* faint colour washes so the white cards get depth */
+  background:
+    radial-gradient(900px 420px at 88% -60px, rgba(83, 74, 183, 0.07), transparent 70%),
+    radial-gradient(760px 400px at -8% 34%, rgba(29, 158, 117, 0.05), transparent 70%);
 }
 
 .container {
@@ -14,30 +19,29 @@
   display: grid;
   place-items: center;
   padding: 40px 20px;
+  background:
+    radial-gradient(700px 380px at 78% 8%, rgba(83, 74, 183, 0.08), transparent 70%),
+    radial-gradient(600px 360px at 12% 86%, rgba(29, 158, 117, 0.06), transparent 70%);
 }
 
 .gateCard {
   width: min(420px, 100%);
   background: #fff;
   border: 1px solid var(--line, #e5e7eb);
-  border-radius: 20px;
-  padding: 36px 32px;
+  border-radius: 22px;
+  padding: 38px 32px;
   text-align: center;
-  box-shadow: 0 18px 50px rgba(83, 74, 183, 0.1);
+  box-shadow: 0 24px 60px rgba(83, 74, 183, 0.14);
   display: flex;
   flex-direction: column;
   align-items: center;
+  animation: riseIn 0.5s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
 }
 
-.gateIcon {
-  width: 62px;
-  height: 62px;
-  border-radius: 50%;
-  display: grid;
-  place-items: center;
-  font-size: 26px;
-  color: var(--primary, #534ab7);
-  background: rgba(83, 74, 183, 0.12);
+.gateLogo {
+  width: 74px;
+  height: 74px;
+  object-fit: contain;
   margin-bottom: 18px;
 }
 
@@ -101,22 +105,19 @@
   padding: 13px;
   border: none;
   border-radius: 12px;
-  background: var(--primary, #534ab7);
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
   color: #fff;
   font-family: inherit;
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 10px 24px rgba(83, 74, 183, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .gateBtn:hover {
-  background: var(--primary-hover, #443a9e);
-}
-
-.gateHint {
-  margin-top: 16px;
-  font-size: 12px;
-  color: var(--muted, #9ca3af);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(83, 74, 183, 0.38);
 }
 
 /* ===== Dashboard shell ===== */
@@ -140,6 +141,15 @@
   border-radius: 22px;
   padding: 28px 22px;
   box-shadow: 0 12px 30px rgba(83, 74, 183, 0.06);
+  animation: riseIn 0.6s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
+}
+
+/* shared smooth entrance — slow rise + fade */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
 }
 
 .adminBadge {
@@ -153,16 +163,10 @@
   gap: 3px;
 }
 
-.badgeIcon {
-  width: 54px;
-  height: 54px;
-  border-radius: 16px;
-  display: grid;
-  place-items: center;
-  font-size: 24px;
-  color: #fff;
-  background: linear-gradient(135deg, #6f63d6, #534ab7);
-  box-shadow: 0 8px 18px rgba(83, 74, 183, 0.3);
+.badgeLogo {
+  width: 58px;
+  height: 58px;
+  object-fit: contain;
   margin-bottom: 8px;
 }
 
@@ -213,8 +217,13 @@
 }
 
 .navActive {
-  background: var(--primary, #534ab7);
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
   color: #fff;
+  box-shadow: 0 8px 20px rgba(83, 74, 183, 0.32);
+}
+
+.navActive:hover {
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
 }
 
 .navActive i {
@@ -332,15 +341,15 @@
   min-width: 0;
 }
 
-/* gentle fade when switching sections */
+/* gentle fade when opening the dashboard / switching sections */
 .main section {
-  animation: secFade 0.28s ease;
+  animation: secFade 0.55s cubic-bezier(0.22, 0.8, 0.36, 1);
 }
 
 @keyframes secFade {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(10px);
   }
 }
 
@@ -390,11 +399,26 @@
   flex-direction: column;
   gap: 5px;
   box-shadow: 0 6px 20px rgba(83, 74, 183, 0.04);
+  /* staggered per-card delay set inline */
+  animation: riseIn 0.6s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
+.statCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 30px rgba(83, 74, 183, 0.1);
+}
+
+/* icon sits in a squircle tinted from its own colour */
 .statIcon {
-  font-size: 23px;
-  margin-bottom: 6px;
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-size: 19px;
+  margin-bottom: 8px;
+  background: color-mix(in srgb, currentColor 11%, #fff);
 }
 
 .statValue {
@@ -425,6 +449,7 @@
   cursor: pointer;
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.1s ease;
   font-family: inherit;
+  animation: riseIn 0.6s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
 }
 
 .levelCard:hover {
@@ -458,6 +483,9 @@
 .levelYears > span {
   font-size: 12px;
   color: var(--muted, #6b7280);
+  background: var(--bg-soft, #f4f4f8);
+  padding: 3px 10px;
+  border-radius: 999px;
 }
 
 .levelYears b {
@@ -483,7 +511,13 @@
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease,
+    transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.chip:hover,
+.chipSm:hover {
+  transform: translateY(-1px);
 }
 
 .chip {
@@ -512,6 +546,7 @@
   background: var(--primary, #534ab7);
   border-color: var(--primary, #534ab7);
   color: #fff;
+  box-shadow: 0 6px 16px rgba(83, 74, 183, 0.3);
 }
 
 .chipActive b {
@@ -592,6 +627,21 @@
      the page padding + heading + filter chips + search bar above the table */
   max-height: max(520px, calc(100vh - 330px));
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(83, 74, 183, 0.3) transparent;
+}
+
+.scrollTable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollTable::-webkit-scrollbar-thumb {
+  background: rgba(83, 74, 183, 0.25);
+  border-radius: 999px;
+}
+
+.scrollTable::-webkit-scrollbar-thumb:hover {
+  background: rgba(83, 74, 183, 0.45);
 }
 
 .table {
@@ -738,6 +788,7 @@
   border: 1px solid var(--line, #e5e7eb);
   border-radius: 14px;
   padding: 16px 18px;
+  animation: riseIn 0.6s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
 }
 
 .reviewAvatar {
@@ -769,6 +820,34 @@
   color: var(--navy, #1e1b4b);
 }
 
+/* clickable reviewer name → student profile */
+.reviewAuthor {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--navy, #1e1b4b);
+  text-decoration: none;
+}
+
+.reviewAuthor i {
+  font-size: 11px;
+  color: var(--primary, #534ab7);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.reviewAuthor:hover {
+  color: var(--primary, #534ab7);
+}
+
+.reviewAuthor:hover i {
+  opacity: 1;
+}
+
+/* the arrow flips in RTL */
+:global([dir="rtl"]) .reviewAuthor i {
+  transform: scaleX(-1);
+}
+
 .reviewText {
   margin-top: 5px;
   font-size: 13.5px;
@@ -788,7 +867,8 @@
   position: fixed;
   inset: 0;
   z-index: 1400;
-  background: rgba(18, 18, 28, 0.5);
+  background: rgba(18, 18, 28, 0.45);
+  backdrop-filter: blur(4px);
   display: grid;
   place-items: center;
   padding: 20px;
@@ -1024,17 +1104,20 @@ a.contactRow:hover {
   padding: 12px 20px;
   border: none;
   border-radius: 12px;
-  background: var(--primary, #534ab7);
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
   color: #fff;
   font-family: inherit;
   font-size: 14.5px;
   font-weight: 700;
   cursor: pointer;
   flex-shrink: 0;
+  box-shadow: 0 8px 20px rgba(83, 74, 183, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .addBtn:hover {
-  background: var(--primary-hover, #443a9e);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(83, 74, 183, 0.34);
 }
 
 /* Site-style course cards — mirrors the public courses page grid. */
@@ -1052,6 +1135,7 @@ a.contactRow:hover {
   display: flex;
   flex-direction: column;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
+  animation: riseIn 0.5s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
 }
 
 .cCard:hover {
@@ -1417,16 +1501,19 @@ a.contactRow:hover {
   padding: 12px 26px;
   border: none;
   border-radius: 12px;
-  background: var(--primary, #534ab7);
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
   color: #fff;
   font-family: inherit;
   font-size: 14.5px;
   font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 8px 20px rgba(83, 74, 183, 0.25);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
 }
 
 .primaryBtn:hover {
-  background: var(--primary-hover, #443a9e);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 26px rgba(83, 74, 183, 0.34);
 }
 
 .confirmModal {
@@ -1483,6 +1570,89 @@ a.contactRow:hover {
 
 .dangerBtn:hover {
   background: #c42d3c;
+}
+
+/* ===== Student profile page (dashboard-style, admin view) ===== */
+.profilePage {
+  max-width: 1020px;
+  margin: 0 auto;
+  padding: 36px 22px 90px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.profileCard {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 20px;
+  padding: 26px 28px;
+  box-shadow: 0 12px 30px rgba(83, 74, 183, 0.06);
+}
+
+.pAvatar {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #6f63d6, #534ab7);
+  color: #fff;
+  font-size: 25px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.pInfo b {
+  display: block;
+  font-size: 23px;
+  font-weight: 800;
+  color: var(--navy, #1e1b4b);
+}
+
+.pContact {
+  margin-inline-start: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pCols {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 22px;
+  align-items: start;
+}
+
+.pCard {
+  background: #fff;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 18px;
+  padding: 8px 22px 22px;
+}
+
+/* enrolled courses double as links to the admin course preview */
+a.detailCourse {
+  text-decoration: none;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+
+a.detailCourse:hover {
+  border-color: var(--primary, #534ab7);
+  background: rgba(83, 74, 183, 0.03);
+}
+
+@media (max-width: 800px) {
+  .pCols {
+    grid-template-columns: 1fr;
+  }
+  .pContact {
+    margin-inline-start: 0;
+  }
 }
 
 /* ===== Admin preview bar (mentor/course pages without site chrome) ===== */
@@ -1548,6 +1718,26 @@ a.contactRow:hover {
 
 .toast i {
   color: #4ade80;
+}
+
+/* ===== Keyboard focus (accessibility) ===== */
+.navItem:focus-visible,
+.chip:focus-visible,
+.chipSm:focus-visible,
+.exportBtn:focus-visible,
+.addBtn:focus-visible,
+.editBtn:focus-visible,
+.delBtn:focus-visible,
+.langBtn:focus-visible,
+.lockBtn:focus-visible,
+.logoutBtn:focus-visible,
+.gateBtn:focus-visible,
+.primaryBtn:focus-visible,
+.ghostBtn:focus-visible,
+.dangerBtn:focus-visible,
+.levelCard:focus-visible {
+  outline: 3px solid rgba(83, 74, 183, 0.4);
+  outline-offset: 2px;
 }
 
 /* ===== Responsive ===== */

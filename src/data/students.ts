@@ -28,6 +28,12 @@ export interface StudentRecord {
   enrolledCourseIds: number[];
   transactions: StudentTx[];
   balance: number; // DZD
+  // --- captured at signup for real registrations (absent on the demo seed) ---
+  age?: number;
+  parentEmail?: string;
+  parentPhone?: string;
+  /** true for accounts created through the signup form */
+  registered?: boolean;
 }
 
 export const CYCLE_ORDER: Cycle[] = ["primary", "middle", "high", "university"];

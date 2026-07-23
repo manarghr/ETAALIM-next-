@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Mentor } from "@/data/mentors";
+import { Mentor, mentorYearCodes, TeachTier } from "@/data/mentors";
 import { getCoursesByMentor, formatDate, formatDZD } from "@/data/courses";
 import {
   tr,
@@ -96,6 +96,18 @@ export default function MentorProfileClient({ mentor }: { mentor: Mentor }) {
                   <span>{t("mentorDetail.experience")}</span>
                   <span>{mentor.experience} {t("mentorDetail.years")}</span>
                 </div>
+                {/* years covered, e.g. "1AM–4AM" (top year and everything below) */}
+                {mentor.teaching.map((te) => {
+                  const codes = mentorYearCodes(mentor, te.tier as TeachTier);
+                  const range =
+                    codes.length > 1 ? `${codes[0]}–${codes[codes.length - 1]}` : codes[0] ?? "";
+                  return (
+                    <div className={styles.infoRow} key={te.tier}>
+                      <span>{t("mentorDetail.teaches")}</span>
+                      <span>{range}</span>
+                    </div>
+                  );
+                })}
                 <div className={styles.infoRow}>
                   <span>{t("mentorDetail.coursesWord")}</span>
                   <span>{mentorCourses.length}</span>

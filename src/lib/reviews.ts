@@ -1,9 +1,13 @@
 // Course reviews (rating + text), localStorage-backed. Each course is seeded
 // with a couple of deterministic demo reviews so the section never looks empty;
 // the student's own reviews are appended and persisted.
+import { students } from "@/data/students";
+
 export interface Review {
   id: string;
   author: string;
+  /** directory id of the reviewing student (seeded reviews) — lets the admin open their profile */
+  studentId?: string;
   rating: number; // 1–5
   textKey?: string; // seeded reviews translate via i18n
   text?: string; // user-written reviews (as typed)
@@ -13,15 +17,6 @@ export interface Review {
 
 const KEY = "etaalim.reviews";
 
-// Deterministic seed pool — picked per course so ratings/authors feel stable.
-const SEED_AUTHORS = [
-  "Mehdi B.",
-  "Ines K.",
-  "Ayoub Z.",
-  "Sara L.",
-  "Rania M.",
-  "Nabil H.",
-];
 const SEED_TEXT_KEYS = [
   "review.seed1",
   "review.seed2",
@@ -30,15 +25,20 @@ const SEED_TEXT_KEYS = [
 ];
 
 function seedFor(courseId: number): Review[] {
-  // 2–3 seeded reviews, deterministic per course.
-  const count = 2 + (courseId % 2);
+  // 2–3 seeded reviews, deterministic per course, written by real students
+  // from the directory — preferably ones actually enrolled in the course.
+  const enrolled = students.filter((s) => s.enrolledCourseIds.includes(courseId));
+  const pool = enrolled.length > 0 ? enrolled : students;
+  const count = Math.min(2 + (courseId % 2), pool.length);
   const out: Review[] = [];
   for (let i = 0; i < count; i++) {
-    const a = (courseId * 7 + i * 3) % SEED_AUTHORS.length;
+    // step by i (not a multiple) so small pools never repeat a reviewer
+    const st = pool[(courseId * 7 + i) % pool.length];
     const k = (courseId * 5 + i) % SEED_TEXT_KEYS.length;
     out.push({
       id: `seed-${courseId}-${i}`,
-      author: SEED_AUTHORS[a],
+      author: st.name,
+      studentId: st.id,
       rating: 4 + ((courseId + i) % 2), // 4 or 5
       textKey: SEED_TEXT_KEYS[k],
       date: new Date(2026, 5, 1 + ((courseId + i) % 27)).toISOString(),

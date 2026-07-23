@@ -6,7 +6,7 @@
 //     profile, starting with an empty dashboard they build up themselves.
 // Immutable pro data comes from the mentors dataset; this store holds the
 // mutable/registered bits. Swap the internals for API calls later.
-import { mentors, Mentor, Certificate } from "@/data/mentors";
+import { mentors, Mentor, Certificate, Teaching } from "@/data/mentors";
 import { getCoursesByMentor } from "@/data/courses";
 import { getRoster } from "@/data/roster";
 
@@ -44,6 +44,8 @@ interface Stored {
   profilePicture: string;
   certificates: Certificate[];
   achievements: string[];
+  /** one cycle + highest year (mentors never span cycles) */
+  teaching: Teaching[];
   // editable dashboard bits
   bioOverride: string;
   hourlyRate: number;
@@ -93,6 +95,7 @@ function seedFor(id: number): Stored {
     profilePicture: m.profilePicture,
     certificates: m.certificates,
     achievements: m.achievements,
+    teaching: m.teaching,
     bioOverride: m.bio,
     hourlyRate: 1500 + (id % 4) * 500,
     availability: "Sun–Thu · 16:00–20:00",
@@ -149,7 +152,7 @@ function resolve(s: Stored): MentorAccount {
       previewPoster: "",
       previewVideo: "",
       lessons: [],
-      teaching: [],
+      teaching: s.teaching ?? [],
       bioOverride: s.bioOverride,
       hourlyRate: s.hourlyRate,
       availability: s.availability,
@@ -203,6 +206,8 @@ export function registerMentor(p: {
   experience: number;
   skills: string[];
   photo?: string | null;
+  /** teaching qualification: cycle + highest year */
+  teaching?: Teaching[];
 }): MentorAccount {
   const stored: Stored = {
     id: CUSTOM_ID,
@@ -218,6 +223,7 @@ export function registerMentor(p: {
     profilePicture: p.photo || DEFAULT_PHOTO,
     certificates: [],
     achievements: [],
+    teaching: p.teaching ?? [],
     bioOverride: "",
     hourlyRate: 1500,
     availability: "Sun–Thu · 16:00–20:00",

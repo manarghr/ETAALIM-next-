@@ -15,18 +15,30 @@ import { getMentorById, getOtherMentorsInMajor } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
 import { isEnrolled } from "@/lib/enrollment";
 import { categoryAccent } from "@/lib/theme";
+import { effectiveCourse, EffectiveCourse } from "@/lib/catalog";
 import { useI18n } from "@/i18n/I18nProvider";
 import CourseLearn from "@/components/CourseLearn";
 import CourseReviews from "@/components/CourseReviews";
 import FavoriteButton from "@/components/FavoriteButton";
 import styles from "./page.module.css";
 
-export default function CourseDetailClient({ course }: { course: Course }) {
+export default function CourseDetailClient({ course: baseCourse }: { course: Course }) {
   const { t, locale } = useI18n();
+
+  // SSR shows the static course; on mount apply the admin's overrides
+  // (edited price/description/status…), stored client-side.
+  const [course, setCourse] = useState<Course | EffectiveCourse>(baseCourse);
+  useEffect(() => {
+    const eff = effectiveCourse(baseCourse.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (eff) setCourse(eff);
+  }, [baseCourse.id]);
+  const description = "description" in course ? course.description : undefined;
 
   // Reflect a prior purchase (stored client-side) — the course shows as unlocked.
   const [enrolled, setEnrolled] = useState(false);
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEnrolled(isEnrolled(course.id));
   }, [course.id]);
 
@@ -93,7 +105,8 @@ export default function CourseDetailClient({ course }: { course: Course }) {
             <main className={styles.main}>
               <div className={styles.panel}>
                 <h2 className={styles.sectionTitle}>{t("courseDetail.aboutTitle")}</h2>
-                <p className={styles.description}>{aboutBody}</p>
+                {/* the admin-written description wins over the generated text */}
+                <p className={styles.description}>{description || aboutBody}</p>
               </div>
 
               <div className={styles.panel}>

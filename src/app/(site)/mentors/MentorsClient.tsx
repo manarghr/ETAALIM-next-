@@ -2,13 +2,36 @@
 
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
-import { filterMentors, getMentorMajors } from "@/data/mentors";
+import {
+  filterMentors,
+  getMentorMajors,
+  mentorTeachesTier,
+  mentorTeachesYear,
+  mentorYearCodes,
+  Mentor,
+  TEACH_YEARS,
+  TeachTier,
+} from "@/data/mentors";
 import { tr, mentorDisplayName, mentorDisplayTitle } from "@/data/localized";
 import { cssVars, categoryAccent } from "@/lib/theme";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./page.module.css";
 
 const MENTORS_PER_PAGE = 9;
+
+const LEVELS: { tier: TeachTier; labelKey: string }[] = [
+  { tier: "Primary", labelKey: "auth.cyclePrimary" },
+  { tier: "Middle", labelKey: "auth.cycleMiddle" },
+  { tier: "High School", labelKey: "auth.cycleHigh" },
+  { tier: "University", labelKey: "auth.cycleUniversity" },
+];
+
+// "1AP–5AP" for a range, or the single year code.
+function teachRange(m: Mentor, tier: TeachTier): string {
+  const codes = mentorYearCodes(m, tier);
+  if (codes.length === 0) return "";
+  return codes.length > 1 ? `${codes[0]}–${codes[codes.length - 1]}` : codes[0];
+}
 
 function first(value: string | string[] | undefined): string {
   if (Array.isArray(value)) return value[0] ?? "";
@@ -24,30 +47,38 @@ export default function MentorsClient({
 
   const search = first(sp.search);
   const major = first(sp.major) || "All";
+  // level + year filters (a 5AP mentor also answers a 2AP search — coverage
+  // extends down to the younger years of their cycle)
+  const level = first(sp.level) as TeachTier | "";
+  const year = first(sp.year);
   let page = parseInt(first(sp.page), 10);
   if (!Number.isFinite(page) || page < 1) page = 1;
 
   const majors = ["All", ...getMentorMajors()];
-  const filtered = filterMentors({ search, major });
+  const filtered = filterMentors({ search, major }).filter((m) => {
+    if (!level) return true;
+    return year ? mentorTeachesYear(m, level, year) : mentorTeachesTier(m, level);
+  });
   const totalPages = Math.ceil(filtered.length / MENTORS_PER_PAGE);
   const offset = (page - 1) * MENTORS_PER_PAGE;
   const pageMentors = filtered.slice(offset, offset + MENTORS_PER_PAGE);
 
-  const chipHref = (m: string) => {
+  const buildHref = (over: { major?: string; level?: string; year?: string; page?: number }) => {
     const params = new URLSearchParams();
-    if (m !== "All") params.set("major", m);
+    const mj = over.major ?? major;
+    const lv = over.level ?? level;
+    const yr = over.year ?? year;
+    if (mj !== "All") params.set("major", mj);
+    if (lv) params.set("level", lv);
+    if (lv && yr) params.set("year", yr);
     if (search) params.set("search", search);
+    if (over.page && over.page > 1) params.set("page", String(over.page));
     const qs = params.toString();
     return qs ? `/mentors?${qs}` : "/mentors";
   };
 
-  const pageHref = (p: number) => {
-    const params = new URLSearchParams();
-    params.set("page", String(p));
-    if (major !== "All") params.set("major", major);
-    if (search) params.set("search", search);
-    return `/mentors?${params.toString()}`;
-  };
+  const chipHref = (m: string) => buildHref({ major: m });
+  const pageHref = (p: number) => buildHref({ page: p });
 
   return (
     <>
@@ -68,6 +99,8 @@ export default function MentorsClient({
                 {major !== "All" && (
                   <input type="hidden" name="major" value={major} />
                 )}
+                {level && <input type="hidden" name="level" value={level} />}
+                {level && year && <input type="hidden" name="year" value={year} />}
                 <div className={styles.searchInput}>
                   <i className="fa fa-search"></i>
                   <input
@@ -96,6 +129,46 @@ export default function MentorsClient({
                   </Link>
                 ))}
               </div>
+
+              {/* Education level — same cycles students pick at signup */}
+              <div className={styles.chips}>
+                <Link
+                  href={buildHref({ level: "", year: "" })}
+                  className={`${styles.chip} ${!level ? styles.chipActive : ""}`}
+                >
+                  {t("admin.allLevels")}
+                </Link>
+                {LEVELS.map((lv) => (
+                  <Link
+                    key={lv.tier}
+                    href={buildHref({ level: lv.tier, year: "" })}
+                    className={`${styles.chip} ${level === lv.tier ? styles.chipActive : ""}`}
+                  >
+                    {t(lv.labelKey)}
+                  </Link>
+                ))}
+              </div>
+
+              {/* Year within the level — a 5AP mentor shows under 1AP–4AP too */}
+              {level && (
+                <div className={styles.chips}>
+                  <Link
+                    href={buildHref({ year: "" })}
+                    className={`${styles.chip} ${!year ? styles.chipActive : ""}`}
+                  >
+                    {t("admin.allYears")}
+                  </Link>
+                  {TEACH_YEARS[level].map((code) => (
+                    <Link
+                      key={code}
+                      href={buildHref({ year: code })}
+                      className={`${styles.chip} ${year === code ? styles.chipActive : ""}`}
+                    >
+                      {code}
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
@@ -142,6 +215,13 @@ export default function MentorsClient({
                       <span className={styles.tag}>
                         {mentor.experience} {t("mentorsPage.yrsExp")}
                       </span>
+                      {/* years they teach, e.g. "1AP–5AP" */}
+                      {mentor.teaching.map((te) => (
+                        <span key={te.tier} className={styles.tag}>
+                          <i className="fa fa-graduation-cap"></i>{" "}
+                          {teachRange(mentor, te.tier)}
+                        </span>
+                      ))}
                     </div>
                     <div className={styles.stars}>
                       <i className="fa fa-star"></i>

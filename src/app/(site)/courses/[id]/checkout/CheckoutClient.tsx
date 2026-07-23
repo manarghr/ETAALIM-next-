@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
-import { Course, JoinOption, formatDZD } from "@/data/courses";
+import { Course, JoinOption, getJoinOption, formatDZD } from "@/data/courses";
+import { effectiveCourse } from "@/lib/catalog";
 import { getMentorById } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
 import { addEnrollment } from "@/lib/enrollment";
@@ -25,11 +26,20 @@ export default function CheckoutClient({
   const [done, setDone] = useState(false);
   const [orderRef, setOrderRef] = useState("");
 
-  const mentor = getMentorById(course.mentorId);
+  // Apply the admin's live price/subject edits (stored client-side) on mount.
+  const [liveCourse, setLiveCourse] = useState<Course>(course);
+  useEffect(() => {
+    const eff = effectiveCourse(course.id);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (eff) setLiveCourse(eff);
+  }, [course.id]);
+  const liveOption = getJoinOption(liveCourse, option.mode);
+
+  const mentor = getMentorById(liveCourse.mentorId);
   const teacher = mentor ? mentorDisplayName(mentor, locale) : "";
-  const subject = tr(course.subject, locale);
+  const subject = tr(liveCourse.subject, locale);
   const optionTitle = tr(option.title, locale);
-  const price = formatDZD(option.price, locale);
+  const price = formatDZD(liveOption.price, locale);
 
   const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();

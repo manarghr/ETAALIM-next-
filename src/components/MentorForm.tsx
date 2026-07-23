@@ -6,6 +6,16 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
 import { registerMentor } from "@/lib/mentor";
+import { TEACH_YEARS, TeachTier } from "@/data/mentors";
+
+// One education cycle per mentor (they never span cycles); labels reuse the
+// signup form's cycle keys.
+const TEACH_TIERS: { tier: TeachTier; labelKey: string }[] = [
+  { tier: "Primary", labelKey: "auth.cyclePrimary" },
+  { tier: "Middle", labelKey: "auth.cycleMiddle" },
+  { tier: "High School", labelKey: "auth.cycleHigh" },
+  { tier: "University", labelKey: "auth.cycleUniversity" },
+];
 import s from "./AuthForm.module.css";
 import m from "./MentorForm.module.css";
 
@@ -20,6 +30,9 @@ export default function MentorForm() {
   const [experience, setExperience] = useState(0);
   const [skills, setSkills] = useState<string[]>([]);
   const [skillInput, setSkillInput] = useState("");
+  // teaching qualification — cycle + highest year in it
+  const [teachTier, setTeachTier] = useState<TeachTier | "">("");
+  const [teachTop, setTeachTop] = useState("");
 
   const toggle = (id: string) => setShow((v) => ({ ...v, [id]: !v[id] }));
   const groupClass = (field: string) =>
@@ -58,6 +71,8 @@ export default function MentorForm() {
     if (String(data.get("password")) !== String(data.get("confirmPassword"))) {
       next.confirmPassword = true;
     }
+    if (!teachTier) next.teachTier = true;
+    if (teachTier && !teachTop) next.teachTop = true;
     if (!data.get("terms")) next.terms = true;
 
     setErrors(next);
@@ -77,6 +92,7 @@ export default function MentorForm() {
       experience,
       skills,
       photo,
+      teaching: teachTier ? [{ tier: teachTier, top: teachTop }] : [],
     });
     login({ name: account.name, email: account.email, role: "mentor" });
     router.push("/mentor-dashboard");
@@ -194,6 +210,59 @@ export default function MentorForm() {
                   />
                 </div>
                 <div className={s.errorMessage}>{t("mentorForm.errExpertise")}</div>
+              </div>
+
+              {/* Teaching level + highest year (covers this year and below) */}
+              <div className={m.row}>
+                <div className={groupClass("teachTier")}>
+                  <label htmlFor="mentor-teach-tier">{t("mentorForm.teachCycle")}</label>
+                  <div className={s.inputWithIcon}>
+                    <i className="fa fa-sitemap"></i>
+                    <select
+                      id="mentor-teach-tier"
+                      value={teachTier}
+                      onChange={(e) => {
+                        setTeachTier(e.target.value as TeachTier | "");
+                        setTeachTop("");
+                      }}
+                    >
+                      <option value="" disabled>
+                        {t("mentorForm.teachCycleSelect")}
+                      </option>
+                      {TEACH_TIERS.map((c) => (
+                        <option key={c.tier} value={c.tier}>
+                          {t(c.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={s.errorMessage}>{t("mentorForm.errTeachCycle")}</div>
+                </div>
+
+                <div className={groupClass("teachTop")}>
+                  <label htmlFor="mentor-teach-top">{t("mentorForm.teachTop")}</label>
+                  <div className={s.inputWithIcon}>
+                    <i className="fa fa-calendar"></i>
+                    <select
+                      id="mentor-teach-top"
+                      value={teachTop}
+                      onChange={(e) => setTeachTop(e.target.value)}
+                      disabled={!teachTier}
+                    >
+                      <option value="" disabled>
+                        {t("mentorForm.teachTopSelect")}
+                      </option>
+                      {teachTier &&
+                        TEACH_YEARS[teachTier].map((code) => (
+                          <option key={code} value={code}>
+                            {code}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+                  <span className={m.fieldHint}>{t("mentorForm.teachHint")}</span>
+                  <div className={s.errorMessage}>{t("mentorForm.errTeachTop")}</div>
+                </div>
               </div>
 
               {/* Qualification + experience */}

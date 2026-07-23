@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
 import { setIdentity, setSignupProfile } from "@/lib/student";
+import { recordRegistration } from "@/lib/registeredStudents";
 import { setActiveMentor, isMentorEmail } from "@/lib/mentor";
 import { tr } from "@/data/localized";
 import { CYCLES, YEARS, streamsForYear, Cycle } from "@/data/education";
@@ -58,9 +59,11 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
 
     // Age: required, a sensible whole number.
     if (!Number.isFinite(ageNum) || ageNum < 3 || ageNum > 100) next.age = true;
-    // Minors must give a parent email.
+    // Minors must give a parent's email AND phone number.
     if (isMinorAge && !String(data.get("parentEmail") ?? "").trim())
       next.parentEmail = true;
+    if (isMinorAge && !String(data.get("parentPhone") ?? "").trim())
+      next.parentPhone = true;
 
     // Education: cycle + year always; stream for high school; major for uni.
     if (!cycle) next.cycle = true;
@@ -89,14 +92,33 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         : "";
 
     // Mock sign-up: start a session, persist the profile, go to the dashboard.
+    const phone = String(data.get("phone") ?? "").trim();
+    const parentEmail = isMinorAge
+      ? String(data.get("parentEmail") ?? "").trim()
+      : "";
+    const parentPhone = isMinorAge
+      ? String(data.get("parentPhone") ?? "").trim()
+      : "";
     login({ name, email, role: "student" });
     setSignupProfile({
       name,
       email,
       age: ageNum,
-      parentEmail: isMinorAge
-        ? String(data.get("parentEmail") ?? "").trim()
-        : "",
+      phone,
+      parentEmail,
+      parentPhone,
+      cycle: cycle as Cycle,
+      year,
+      extra,
+    });
+    // Mirror the registration into the admin's student directory.
+    recordRegistration({
+      name,
+      email,
+      phone,
+      age: ageNum,
+      parentEmail,
+      parentPhone,
       cycle: cycle as Cycle,
       year,
       extra,
@@ -253,24 +275,42 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <div className={styles.errorMessage}>{t("auth.errAge")}</div>
                 </div>
 
-                {/* Minors need a parent's email for purchase approvals. */}
+                {/* Minors need a parent's email + phone for purchase approvals. */}
                 {isMinorAge && (
-                  <div className={groupClass("parentEmail")}>
-                    <label htmlFor="reg-parent">{t("auth.parentEmail")}</label>
-                    <div className={styles.inputWithIcon}>
-                      <i className="fa fa-shield"></i>
-                      <input
-                        type="email"
-                        id="reg-parent"
-                        name="parentEmail"
-                        placeholder={t("auth.parentEmailPh")}
-                      />
+                  <>
+                    <div className={groupClass("parentEmail")}>
+                      <label htmlFor="reg-parent">{t("auth.parentEmail")}</label>
+                      <div className={styles.inputWithIcon}>
+                        <i className="fa fa-shield"></i>
+                        <input
+                          type="email"
+                          id="reg-parent"
+                          name="parentEmail"
+                          placeholder={t("auth.parentEmailPh")}
+                        />
+                      </div>
+                      <p className={styles.fieldHint}>{t("auth.parentEmailHint")}</p>
+                      <div className={styles.errorMessage}>
+                        {t("auth.errParentEmail")}
+                      </div>
                     </div>
-                    <p className={styles.fieldHint}>{t("auth.parentEmailHint")}</p>
-                    <div className={styles.errorMessage}>
-                      {t("auth.errParentEmail")}
+
+                    <div className={groupClass("parentPhone")}>
+                      <label htmlFor="reg-parent-phone">{t("auth.parentPhone")}</label>
+                      <div className={styles.inputWithIcon}>
+                        <i className="fa fa-phone"></i>
+                        <input
+                          type="tel"
+                          id="reg-parent-phone"
+                          name="parentPhone"
+                          placeholder={t("auth.parentPhonePh")}
+                        />
+                      </div>
+                      <div className={styles.errorMessage}>
+                        {t("auth.errParentPhone")}
+                      </div>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 <div className={groupClass("cycle")}>

@@ -25,14 +25,8 @@ import {
 } from "@/data/courses";
 import CourseBanner from "@/components/CourseBanner";
 import { cssVars, categoryAccent } from "@/lib/theme";
-import {
-  students,
-  CYCLE_ORDER,
-  countByCycle,
-  countByYear,
-  totalEnrollments,
-  StudentRecord,
-} from "@/data/students";
+import { students, CYCLE_ORDER, StudentRecord } from "@/data/students";
+import { getRegisteredStudents } from "@/lib/registeredStudents";
 import { YEARS, educationLabel, Cycle } from "@/data/education";
 import { getReviews, averageRating, reviewCount } from "@/lib/reviews";
 import { isAdminUnlocked, unlockAdmin, lockAdmin } from "@/lib/admin";
@@ -130,6 +124,10 @@ export default function AdminClient() {
   const [mentorYear, setMentorYear] = useState<string>("all");
   const [mentorSearch, setMentorSearch] = useState("");
 
+  // Students = demo directory + everyone who registered through the signup form.
+  const [registered, setRegistered] = useState<StudentRecord[]>([]);
+  const allStudents = useMemo(() => [...registered, ...students], [registered]);
+
   // Course management
   const [adminCourses, setAdminCourses] = useState<AdminCourse[]>([]);
   const [toast, setToast] = useState<string | null>(null);
@@ -143,6 +141,7 @@ export default function AdminClient() {
     setMounted(true);
     setUnlocked(isAdminUnlocked());
     setAdminCourses(getAdminCourses());
+    setRegistered(getRegisteredStudents());
   }, []);
 
   // Escape closes whichever modal is open.
@@ -178,11 +177,16 @@ export default function AdminClient() {
   // Enrollment counts per course, from the student directory.
   const enrolledByCourse = useMemo(() => {
     const map = new Map<number, number>();
-    students.forEach((s) =>
+    allStudents.forEach((s) =>
       s.enrolledCourseIds.forEach((id) => map.set(id, (map.get(id) ?? 0) + 1))
     );
     return map;
-  }, []);
+  }, [allStudents]);
+
+  // Directory counts (demo + registered).
+  const cycleCount = (cy: Cycle) => allStudents.filter((s) => s.cycle === cy).length;
+  const cycleYearCount = (cy: Cycle, y: string) =>
+    allStudents.filter((s) => s.cycle === cy && s.year === y).length;
 
   if (!mounted) return <div className={styles.wrap} />;
 
@@ -191,9 +195,8 @@ export default function AdminClient() {
     return (
       <div className={styles.gateWrap}>
         <form className={styles.gateCard} onSubmit={submit}>
-          <div className={styles.gateIcon}>
-            <i className="fa fa-lock"></i>
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/logo.png" alt="E-Taalim" className={styles.gateLogo} />
           <h1>{t("admin.gateTitle")}</h1>
           <p>{t("admin.gateSub")}</p>
           <div className={`${styles.gateField} ${error ? styles.gateError : ""}`}>
@@ -213,14 +216,13 @@ export default function AdminClient() {
           <button type="submit" className={styles.gateBtn}>
             {t("admin.unlock")}
           </button>
-          <span className={styles.gateHint}>{t("admin.demoHint")}</span>
         </form>
       </div>
     );
   }
 
   // ===== Aggregations (over the admin-managed course list, held in state) =====
-  const enrollments = totalEnrollments();
+  const enrollments = allStudents.reduce((s, st) => s + st.enrolledCourseIds.length, 0);
   const reviewsTotal = courses.reduce((s, c) => s + reviewCount(c.id), 0);
   const ratings = courses.map((c) => averageRating(c.id)).filter((r) => r > 0);
   const avgRating = ratings.length
@@ -234,7 +236,7 @@ export default function AdminClient() {
   const stats = [
     { icon: "fa-graduation-cap", color: "#534ab7", value: mentors.length, label: t("admin.statMentors") },
     { icon: "fa-book", color: "#1d9e75", value: adminCourses.length, label: t("admin.statCourses") },
-    { icon: "fa-users", color: "#e0894a", value: students.length, label: t("admin.statStudents") },
+    { icon: "fa-users", color: "#e0894a", value: allStudents.length, label: t("admin.statStudents") },
     { icon: "fa-check-circle", color: "#534ab7", value: enrollments, label: t("admin.statEnrollments") },
     { icon: "fa-star", color: "#f5a623", value: reviewsTotal, label: t("admin.statReviews") },
     { icon: "fa-star-half-o", color: "#e0894a", value: avgRating.toFixed(1), label: t("admin.statRating") },
@@ -381,7 +383,7 @@ export default function AdminClient() {
     showToast(t("admin.toastUnassigned"));
   };
 
-  const filteredStudents = students.filter((s) => {
+  const filteredStudents = allStudents.filter((s) => {
     if (cycleFilter !== "all" && s.cycle !== cycleFilter) return false;
     if (yearFilter !== "all" && s.year !== yearFilter) return false;
     const q = studentSearch.trim().toLowerCase();
@@ -430,6 +432,8 @@ export default function AdminClient() {
         t("admin.thName"),
         t("admin.colEmail"),
         t("admin.colPhone"),
+        t("admin.colParentEmail"),
+        t("admin.colParentPhone"),
         t("admin.thField"),
         t("admin.thYear"),
         t("admin.thEnrolled"),
@@ -440,6 +444,8 @@ export default function AdminClient() {
         s.name,
         s.email,
         s.phone,
+        s.parentEmail ?? "",
+        s.parentPhone ?? "",
         gradeOf(s),
         s.year,
         s.enrolledCourseIds.length,
@@ -483,7 +489,7 @@ export default function AdminClient() {
 
   const navCount = (key: Section) =>
     key === "students"
-      ? students.length
+      ? allStudents.length
       : key === "courses"
       ? adminCourses.length
       : key === "mentors"
@@ -497,9 +503,8 @@ export default function AdminClient() {
           {/* ===== Sidebar ===== */}
           <aside className={styles.sidebar}>
             <div className={styles.adminBadge}>
-              <span className={styles.badgeIcon}>
-                <i className="fa fa-shield"></i>
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/logo.png" alt="E-Taalim" className={styles.badgeLogo} />
               <b>E-Taalim</b>
               <span>{t("admin.role")}</span>
             </div>
@@ -565,8 +570,12 @@ export default function AdminClient() {
                 </div>
 
                 <div className={styles.statGrid}>
-                  {stats.map((s) => (
-                    <div key={s.label} className={styles.statCard}>
+                  {stats.map((s, i) => (
+                    <div
+                      key={s.label}
+                      className={styles.statCard}
+                      style={{ animationDelay: `${100 + i * 70}ms` }}
+                    >
                       <span className={styles.statIcon} style={{ color: s.color }}>
                         <i className={`fa ${s.icon}`}></i>
                       </span>
@@ -578,22 +587,23 @@ export default function AdminClient() {
 
                 <h2 className={styles.blockTitle}>{t("admin.byLevel")}</h2>
                 <div className={styles.levelGrid}>
-                  {CYCLE_ORDER.map((cy) => (
+                  {CYCLE_ORDER.map((cy, i) => (
                     <button
                       key={cy}
                       className={styles.levelCard}
+                      style={{ animationDelay: `${450 + i * 80}ms` }}
                       onClick={() => {
                         setCycleFilter(cy);
                         setYearFilter("all");
                         setSection("students");
                       }}
                     >
-                      <span className={styles.levelCount}>{countByCycle(cy)}</span>
+                      <span className={styles.levelCount}>{cycleCount(cy)}</span>
                       <span className={styles.levelName}>{t(CYCLE_KEY[cy])}</span>
                       <span className={styles.levelYears}>
                         {YEARS[cy].map((y) => (
                           <span key={y}>
-                            {y} <b>{countByYear(cy, y)}</b>
+                            {y} <b>{cycleYearCount(cy, y)}</b>
                           </span>
                         ))}
                       </span>
@@ -603,14 +613,28 @@ export default function AdminClient() {
 
                 <h2 className={styles.blockTitle}>{t("admin.reviewsTitle")}</h2>
                 <div className={styles.reviewList}>
-                  {latestReviews.map(({ r, course }) => (
-                    <div key={r.id} className={styles.reviewCard}>
+                  {latestReviews.map(({ r, course }, i) => (
+                    <div
+                      key={r.id}
+                      className={styles.reviewCard}
+                      style={{ animationDelay: `${750 + i * 70}ms` }}
+                    >
                       <div className={styles.reviewAvatar}>
                         {r.author.trim().charAt(0).toUpperCase()}
                       </div>
                       <div className={styles.reviewBody}>
                         <div className={styles.reviewTop}>
-                          <b>{r.author}</b>
+                          {/* reviewer name links to their student profile */}
+                          {r.studentId ? (
+                            <Link
+                              href={`/admin/students/${r.studentId}`}
+                              className={styles.reviewAuthor}
+                            >
+                              {r.author} <i className="fa fa-arrow-right"></i>
+                            </Link>
+                          ) : (
+                            <b>{r.author}</b>
+                          )}
                           <span className={styles.rating}>
                             <i className="fa fa-star"></i> {r.rating}
                           </span>
@@ -645,7 +669,7 @@ export default function AdminClient() {
                       setYearFilter("all");
                     }}
                   >
-                    {t("admin.allLevels")} <b>{students.length}</b>
+                    {t("admin.allLevels")} <b>{allStudents.length}</b>
                   </button>
                   {CYCLE_ORDER.map((cy) => (
                     <button
@@ -656,14 +680,14 @@ export default function AdminClient() {
                         setYearFilter("all");
                       }}
                     >
-                      {t(CYCLE_KEY[cy])} <b>{countByCycle(cy)}</b>
+                      {t(CYCLE_KEY[cy])} <b>{cycleCount(cy)}</b>
                     </button>
                   ))}
                   {/* export everyone, regardless of filters */}
                   <div className={styles.exportGroup}>
                     <button
                       className={styles.exportBtn}
-                      onClick={() => exportStudents(students, "all")}
+                      onClick={() => exportStudents(allStudents, "all")}
                     >
                       <i className="fa fa-file-excel-o"></i> {t("admin.exportAll")}
                     </button>
@@ -685,7 +709,7 @@ export default function AdminClient() {
                         className={`${styles.chipSm} ${yearFilter === y ? styles.chipActive : ""}`}
                         onClick={() => setYearFilter(y)}
                       >
-                        {y} <b>{countByYear(cycleFilter, y)}</b>
+                        {y} <b>{cycleYearCount(cycleFilter, y)}</b>
                       </button>
                     ))}
                     {/* export the selected level, and — once a year is
@@ -695,7 +719,7 @@ export default function AdminClient() {
                         className={styles.exportBtn}
                         onClick={() =>
                           exportStudents(
-                            students.filter((s) => s.cycle === cycleFilter),
+                            allStudents.filter((s) => s.cycle === cycleFilter),
                             cycleFilter
                           )
                         }
@@ -708,7 +732,7 @@ export default function AdminClient() {
                           className={styles.exportBtn}
                           onClick={() =>
                             exportStudents(
-                              students.filter(
+                              allStudents.filter(
                                 (s) => s.cycle === cycleFilter && s.year === yearFilter
                               ),
                               `${cycleFilter}-${yearFilter}`
@@ -746,6 +770,7 @@ export default function AdminClient() {
                           <th>{t("admin.thYear")}</th>
                           <th>{t("admin.thEnrolled")}</th>
                           <th>{t("admin.thJoined")}</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -755,12 +780,27 @@ export default function AdminClient() {
                               <div className={styles.mentorCell}>
                                 <span className={styles.miniAvatar}>{s.initials}</span>
                                 <span>{s.name}</span>
+                                {s.registered && (
+                                  <span className={`${styles.badge} ${styles.bAvail}`}>
+                                    {t("admin.regBadge")}
+                                  </span>
+                                )}
                               </div>
                             </td>
                             <td>{gradeOf(s)}</td>
                             <td>{s.year}</td>
                             <td>{s.enrolledCourseIds.length}</td>
                             <td>{formatDate(s.joined.slice(0, 10), locale)}</td>
+                            <td>
+                              {/* full profile page (row click keeps the quick modal) */}
+                              <Link
+                                href={`/admin/students/${s.id}`}
+                                className={styles.viewLink}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {t("admin.view")} <i className="fa fa-arrow-right"></i>
+                              </Link>
+                            </td>
                           </tr>
                         ))}
                       </tbody>
@@ -861,12 +901,16 @@ export default function AdminClient() {
                   <p className={styles.muted}>{t("admin.noCourses")}</p>
                 ) : (
                   <div className={styles.courseGrid}>
-                    {filteredCourses.map((c) => {
+                    {filteredCourses.map((c, i) => {
                       const available = mentors.filter((m) => !c.mentorIds.includes(m.id));
                       const exam =
                         c.yearCode === "4AM" ? "BEM" : c.yearCode === "3AS" ? "BAC" : null;
                       return (
-                        <div key={c.id} className={styles.cCard}>
+                        <div
+                          key={c.id}
+                          className={styles.cCard}
+                          style={{ animationDelay: `${Math.min(i, 8) * 60}ms` }}
+                        >
                           {/* Banner — identical layer stack to the public courses page */}
                           <div className={styles.cThumb}>
                             <CourseBanner subject={c.major} seed={c.id} />
@@ -1188,6 +1232,17 @@ export default function AdminClient() {
               <span className={styles.contactRow}>
                 <i className="fa fa-phone"></i> {active.phone}
               </span>
+              {/* parent/guardian contact — captured at signup for minors */}
+              {active.parentEmail && (
+                <a href={`mailto:${active.parentEmail}`} className={styles.contactRow}>
+                  <i className="fa fa-shield"></i> {t("admin.dParent")} · {active.parentEmail}
+                </a>
+              )}
+              {active.parentPhone && (
+                <span className={styles.contactRow}>
+                  <i className="fa fa-mobile"></i> {t("admin.dParent")} · {active.parentPhone}
+                </span>
+              )}
               <a href={`mailto:${active.email}`} className={styles.emailBtn}>
                 <i className="fa fa-paper-plane"></i> {t("admin.dSendEmail")}
               </a>

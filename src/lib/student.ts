@@ -24,6 +24,10 @@ export interface Student {
   grade: string; // legacy display string; new signups use the education* fields
   age: number;
   parentEmail: string;
+  /** student's own phone (from signup) */
+  phone?: string;
+  /** parent/guardian phone — captured for minors at signup */
+  parentPhone?: string;
   // Structured education captured at signup (Algerian system). Optional so the
   // demo seed and older records still work; the dashboard composes a localized
   // label from these when present, else falls back to `grade`.
@@ -118,7 +122,9 @@ export function setSignupProfile(p: {
   name: string;
   email: string;
   age: number;
+  phone?: string;
   parentEmail?: string;
+  parentPhone?: string;
   cycle: string;
   year: string;
   extra: string;
@@ -127,8 +133,10 @@ export function setSignupProfile(p: {
   s.name = p.name || s.name;
   s.email = p.email || s.email;
   s.age = p.age;
-  // Only minors need a parent email; keep any existing one otherwise.
+  if (p.phone) s.phone = p.phone;
+  // Only minors need parent contact details; keep any existing ones otherwise.
   if (p.parentEmail) s.parentEmail = p.parentEmail;
+  if (p.parentPhone) s.parentPhone = p.parentPhone;
   s.educationCycle = p.cycle;
   s.educationYear = p.year;
   s.educationExtra = p.extra;
