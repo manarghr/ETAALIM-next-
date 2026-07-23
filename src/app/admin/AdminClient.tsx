@@ -145,6 +145,19 @@ export default function AdminClient() {
     setAdminCourses(getAdminCourses());
   }, []);
 
+  // Escape closes whichever modal is open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActive(null);
+        setCourseEditing(null);
+        setCourseDelete(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const submit = (e: FormEvent) => {
     e.preventDefault();
     if (unlockAdmin(pw)) {
@@ -224,6 +237,7 @@ export default function AdminClient() {
     { icon: "fa-users", color: "#e0894a", value: students.length, label: t("admin.statStudents") },
     { icon: "fa-check-circle", color: "#534ab7", value: enrollments, label: t("admin.statEnrollments") },
     { icon: "fa-star", color: "#f5a623", value: reviewsTotal, label: t("admin.statReviews") },
+    { icon: "fa-star-half-o", color: "#e0894a", value: avgRating.toFixed(1), label: t("admin.statRating") },
     { icon: "fa-money", color: "#1d9e75", value: money(revenue), label: t("admin.statRevenue") },
   ];
 
@@ -385,27 +399,12 @@ export default function AdminClient() {
 
   // ----- Excel export (CSV with BOM + sep directive so Excel opens it
   // correctly in any locale, Arabic/French text included) -----
-  const exportStudents = (rows: StudentRecord[], scope: string) => {
-    const header = [
-      t("admin.thName"),
-      t("admin.colEmail"),
-      t("admin.colPhone"),
-      t("admin.thField"),
-      t("admin.thYear"),
-      t("admin.thEnrolled"),
-      t("admin.dBalance"),
-      t("admin.thJoined"),
-    ];
-    const data = rows.map((s) => [
-      s.name,
-      s.email,
-      s.phone,
-      gradeOf(s),
-      s.year,
-      s.enrolledCourseIds.length,
-      s.balance,
-      s.joined.slice(0, 10),
-    ]);
+  const downloadCsv = (
+    filename: string,
+    header: string[],
+    data: (string | number)[][],
+    toastMsg: string
+  ) => {
     const esc = (v: string | number) => {
       const str = String(v);
       return /[";\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
@@ -418,10 +417,68 @@ export default function AdminClient() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `etaalim-students-${scope}.csv`;
+    a.download = filename.replace(/\s+/g, "-").toLowerCase();
     a.click();
     URL.revokeObjectURL(url);
-    showToast(t("admin.toastExported"));
+    showToast(toastMsg);
+  };
+
+  const exportStudents = (rows: StudentRecord[], scope: string) => {
+    downloadCsv(
+      `etaalim-students-${scope}.csv`,
+      [
+        t("admin.thName"),
+        t("admin.colEmail"),
+        t("admin.colPhone"),
+        t("admin.thField"),
+        t("admin.thYear"),
+        t("admin.thEnrolled"),
+        t("admin.dBalance"),
+        t("admin.thJoined"),
+      ],
+      rows.map((s) => [
+        s.name,
+        s.email,
+        s.phone,
+        gradeOf(s),
+        s.year,
+        s.enrolledCourseIds.length,
+        s.balance,
+        s.joined.slice(0, 10),
+      ]),
+      t("admin.toastExported")
+    );
+  };
+
+  const exportMentors = (rows: typeof mentorRows, scope: string) => {
+    downloadCsv(
+      `etaalim-mentors-${scope}.csv`,
+      [
+        t("admin.thMentor"),
+        t("admin.colEmail"),
+        t("admin.colPhone"),
+        t("admin.thField"),
+        t("admin.thTeaches"),
+        t("admin.colExperience"),
+        t("admin.thCourses"),
+        t("admin.thStudents"),
+        t("admin.thRating"),
+      ],
+      rows.map(({ mt, courses: cc, students: st, rating }) => [
+        mt.name,
+        mt.email,
+        mt.phone,
+        tr(mt.major, locale),
+        mt.teaching
+          .map((te) => `${t(TIER_KEY[te.tier])} ${teachRange(mt, te.tier)}`)
+          .join(" · "),
+        mt.experience,
+        cc,
+        st,
+        rating,
+      ]),
+      t("admin.toastExportedMentors")
+    );
   };
 
   const navCount = (key: Section) =>
@@ -962,6 +1019,15 @@ export default function AdminClient() {
                       {t(TIER_KEY[tier])} <b>{mentorTierCount(tier)}</b>
                     </button>
                   ))}
+                  {/* export every mentor, regardless of filters */}
+                  <div className={styles.exportGroup}>
+                    <button
+                      className={styles.exportBtn}
+                      onClick={() => exportMentors(mentorRows, "all")}
+                    >
+                      <i className="fa fa-file-excel-o"></i> {t("admin.exportAll")}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Year sub-filter — mentors qualified for an older year also
@@ -983,6 +1049,38 @@ export default function AdminClient() {
                         {code} <b>{mentorYearCount(mentorTier, code)}</b>
                       </button>
                     ))}
+                    {/* export the selected level, and — once a year is
+                        picked — the mentors covering that year too */}
+                    <div className={styles.exportGroup}>
+                      <button
+                        className={styles.exportBtn}
+                        onClick={() =>
+                          exportMentors(
+                            mentorRows.filter(({ mt }) => mentorTeachesTier(mt, mentorTier)),
+                            mentorTier
+                          )
+                        }
+                      >
+                        <i className="fa fa-file-excel-o"></i>{" "}
+                        {t("admin.exportLevel", { level: t(TIER_KEY[mentorTier]) })}
+                      </button>
+                      {mentorYear !== "all" && (
+                        <button
+                          className={styles.exportBtn}
+                          onClick={() =>
+                            exportMentors(
+                              mentorRows.filter(({ mt }) =>
+                                mentorTeachesYear(mt, mentorTier, mentorYear)
+                              ),
+                              `${mentorTier}-${mentorYear}`
+                            )
+                          }
+                        >
+                          <i className="fa fa-file-excel-o"></i>{" "}
+                          {t("admin.exportYear", { year: mentorYear })}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -1341,7 +1439,11 @@ export default function AdminClient() {
         </div>
       )}
 
-      {toast && <div className={styles.toast}>{toast}</div>}
+      {toast && (
+        <div className={styles.toast}>
+          <i className="fa fa-check-circle"></i> {toast}
+        </div>
+      )}
     </div>
   );
 }
