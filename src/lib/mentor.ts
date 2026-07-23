@@ -149,6 +149,7 @@ function resolve(s: Stored): MentorAccount {
       previewPoster: "",
       previewVideo: "",
       lessons: [],
+      teaching: [],
       bioOverride: s.bioOverride,
       hourlyRate: s.hourlyRate,
       availability: s.availability,

@@ -10,6 +10,29 @@ export interface LessonVideo {
   thumbnail: string;
 }
 
+// Education cycles a mentor can teach, mirroring the course tiers.
+export type TeachTier = "Primary" | "Middle" | "High School" | "University";
+
+/**
+ * A teaching qualification. Each mentor belongs to ONE education cycle and is
+ * qualified up to a HIGHEST year in it; that implies teaching every year below
+ * it in the same cycle (a 5AP primary teacher can also teach 1AP–4AP; a 4AM
+ * teacher covers 1AM–3AM), but never a different cycle.
+ */
+export interface Teaching {
+  tier: TeachTier;
+  /** highest Algerian year code (5AP, 4AM, 3AS, Master…) */
+  top: string;
+}
+
+/** Year codes per cycle, youngest → oldest (same codes the course catalog uses). */
+export const TEACH_YEARS: Record<TeachTier, string[]> = {
+  Primary: ["1AP", "2AP", "3AP", "4AP", "5AP"],
+  Middle: ["1AM", "2AM", "3AM", "4AM"],
+  "High School": ["1AS", "2AS", "3AS"],
+  University: ["Licence", "Master", "Doctorat"],
+};
+
 export interface Mentor {
   id: number;
   name: string;
@@ -35,6 +58,8 @@ export interface Mentor {
   previewVideo: string;
   /** recorded lesson videos */
   lessons: LessonVideo[];
+  /** cycles + highest year the mentor is qualified to teach */
+  teaching: Teaching[];
 }
 
 // A short, professional sample clip used as the "sneak peek" for every course.
@@ -113,6 +138,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[1],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Mathematics", 0),
+    teaching: [{ tier: "High School", top: "3AS" }],
   },
   {
     id: 2,
@@ -137,6 +163,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[2],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Physics", 1),
+    teaching: [{ tier: "Middle", top: "4AM" }],
   },
   {
     id: 3,
@@ -161,6 +188,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[2],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Computer Science", 2),
+    teaching: [{ tier: "University", top: "Doctorat" }],
   },
   {
     id: 4,
@@ -185,6 +213,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[0],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Chemistry", 3),
+    teaching: [{ tier: "High School", top: "3AS" }],
   },
   {
     id: 5,
@@ -209,6 +238,8 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[4],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Biology", 4),
+    // qualified up to 3AM only — teaches 1AM–3AM but not the 4AM (BEM) year
+    teaching: [{ tier: "Middle", top: "3AM" }],
   },
   {
     id: 6,
@@ -233,6 +264,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[3],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("English", 5),
+    teaching: [{ tier: "High School", top: "3AS" }],
   },
   {
     id: 7,
@@ -257,6 +289,8 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[5],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("French", 2),
+    // primary teacher of 5AP — also covers the younger years (1AP–4AP)
+    teaching: [{ tier: "Primary", top: "5AP" }],
   },
   {
     id: 8,
@@ -281,6 +315,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[2],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Economics", 3),
+    teaching: [{ tier: "University", top: "Master" }],
   },
   {
     id: 9,
@@ -305,11 +340,30 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[4],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("History", 5),
+    // primary teacher qualified for 5AP — also covers 1AP–4AP
+    teaching: [{ tier: "Primary", top: "5AP" }],
   },
 ];
 
 export function getMentors(): Mentor[] {
   return mentors;
+}
+
+/** Every year code the mentor covers in a cycle: their top year and all below. */
+export function mentorYearCodes(m: Mentor, tier: TeachTier): string[] {
+  const q = m.teaching.find((te) => te.tier === tier);
+  if (!q) return [];
+  const order = TEACH_YEARS[tier];
+  const idx = order.indexOf(q.top);
+  return idx < 0 ? [] : order.slice(0, idx + 1);
+}
+
+export function mentorTeachesTier(m: Mentor, tier: TeachTier): boolean {
+  return m.teaching.some((te) => te.tier === tier);
+}
+
+export function mentorTeachesYear(m: Mentor, tier: TeachTier, code: string): boolean {
+  return mentorYearCodes(m, tier).includes(code);
 }
 
 export function getMentorById(id: number): Mentor | undefined {
