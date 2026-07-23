@@ -2,7 +2,9 @@
 
 import { useState, useEffect, useMemo, FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { Locale } from "@/i18n/translations";
 import { tr, mentorDisplayName } from "@/data/localized";
 import {
   mentors,
@@ -97,8 +99,15 @@ const EMPTY_COURSE: AdminCourseInput = {
 // Unique subject fields, for the editor's suggestions list.
 const MAJORS = Array.from(new Set(courses.map((c) => c.major))).sort();
 
+const LANGS: { code: Locale; flag: string }[] = [
+  { code: "en", flag: "🇬🇧" },
+  { code: "fr", flag: "🇫🇷" },
+  { code: "ar", flag: "🇩🇿" },
+];
+
 export default function AdminClient() {
-  const { t, locale } = useI18n();
+  const { t, locale, setLocale } = useI18n();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [pw, setPw] = useState("");
@@ -412,15 +421,39 @@ export default function AdminClient() {
                 );
               })}
             </nav>
-            <button
-              className={styles.lockBtn}
-              onClick={() => {
-                lockAdmin();
-                setUnlocked(false);
-              }}
-            >
-              <i className="fa fa-lock"></i> {t("admin.lock")}
-            </button>
+            {/* Bottom controls — language, lock, logout */}
+            <div className={styles.sideBottom}>
+              <div className={styles.langRow}>
+                {LANGS.map((l) => (
+                  <button
+                    key={l.code}
+                    className={`${styles.langBtn} ${locale === l.code ? styles.langActive : ""}`}
+                    onClick={() => setLocale(l.code)}
+                  >
+                    <span>{l.flag}</span> {l.code.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+              <button
+                className={styles.lockBtn}
+                onClick={() => {
+                  lockAdmin();
+                  setUnlocked(false);
+                }}
+              >
+                <i className="fa fa-lock"></i> {t("admin.lock")}
+              </button>
+              <button
+                className={styles.logoutBtn}
+                onClick={() => {
+                  // leave the admin session and return to the public site
+                  lockAdmin();
+                  router.push("/");
+                }}
+              >
+                <i className="fa fa-sign-out"></i> {t("nav.logout")}
+              </button>
+            </div>
           </aside>
 
           {/* ===== Main ===== */}
