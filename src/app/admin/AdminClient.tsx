@@ -383,6 +383,47 @@ export default function AdminClient() {
   const gradeOf = (s: StudentRecord) =>
     educationLabel({ cycle: s.cycle, year: s.year, extra: s.extra }, locale);
 
+  // ----- Excel export (CSV with BOM + sep directive so Excel opens it
+  // correctly in any locale, Arabic/French text included) -----
+  const exportStudents = (rows: StudentRecord[], scope: string) => {
+    const header = [
+      t("admin.thName"),
+      t("admin.colEmail"),
+      t("admin.colPhone"),
+      t("admin.thField"),
+      t("admin.thYear"),
+      t("admin.thEnrolled"),
+      t("admin.dBalance"),
+      t("admin.thJoined"),
+    ];
+    const data = rows.map((s) => [
+      s.name,
+      s.email,
+      s.phone,
+      gradeOf(s),
+      s.year,
+      s.enrolledCourseIds.length,
+      s.balance,
+      s.joined.slice(0, 10),
+    ]);
+    const esc = (v: string | number) => {
+      const str = String(v);
+      return /[";\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
+    };
+    const csv =
+      String.fromCharCode(0xfeff) + // UTF-8 BOM so Excel detects the encoding
+      "sep=;\r\n" + // Excel's separator directive (works in every locale)
+      [header, ...data].map((r) => r.map(esc).join(";")).join("\r\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `etaalim-students-${scope}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast(t("admin.toastExported"));
+  };
+
   const navCount = (key: Section) =>
     key === "students"
       ? students.length
@@ -561,6 +602,15 @@ export default function AdminClient() {
                       {t(CYCLE_KEY[cy])} <b>{countByCycle(cy)}</b>
                     </button>
                   ))}
+                  {/* export everyone, regardless of filters */}
+                  <div className={styles.exportGroup}>
+                    <button
+                      className={styles.exportBtn}
+                      onClick={() => exportStudents(students, "all")}
+                    >
+                      <i className="fa fa-file-excel-o"></i> {t("admin.exportAll")}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Year sub-filter */}
@@ -581,6 +631,38 @@ export default function AdminClient() {
                         {y} <b>{countByYear(cycleFilter, y)}</b>
                       </button>
                     ))}
+                    {/* export the selected level, and — once a year is
+                        picked — that single year too */}
+                    <div className={styles.exportGroup}>
+                      <button
+                        className={styles.exportBtn}
+                        onClick={() =>
+                          exportStudents(
+                            students.filter((s) => s.cycle === cycleFilter),
+                            cycleFilter
+                          )
+                        }
+                      >
+                        <i className="fa fa-file-excel-o"></i>{" "}
+                        {t("admin.exportLevel", { level: t(CYCLE_KEY[cycleFilter]) })}
+                      </button>
+                      {yearFilter !== "all" && (
+                        <button
+                          className={styles.exportBtn}
+                          onClick={() =>
+                            exportStudents(
+                              students.filter(
+                                (s) => s.cycle === cycleFilter && s.year === yearFilter
+                              ),
+                              `${cycleFilter}-${yearFilter}`
+                            )
+                          }
+                        >
+                          <i className="fa fa-file-excel-o"></i>{" "}
+                          {t("admin.exportYear", { year: yearFilter })}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
 
@@ -841,7 +923,7 @@ export default function AdminClient() {
                                 <i className="fa fa-trash"></i>
                               </button>
                               {!c.custom && (
-                                <Link href={`/courses/${c.id}`} className={styles.viewLink}>
+                                <Link href={`/admin/courses/${c.id}`} className={styles.viewLink}>
                                   {t("admin.view")} <i className="fa fa-arrow-right"></i>
                                 </Link>
                               )}
@@ -964,7 +1046,7 @@ export default function AdminClient() {
                             </td>
                             <td>
                               {/* full public profile, exactly as students see it */}
-                              <Link href={`/mentors/${mt.id}`} className={styles.viewLink}>
+                              <Link href={`/admin/mentors/${mt.id}`} className={styles.viewLink}>
                                 {t("admin.view")} <i className="fa fa-arrow-right"></i>
                               </Link>
                             </td>

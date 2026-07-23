@@ -70,6 +70,9 @@ export const translations = {
       allStreams: "All streams",
       fYear: "Year / stream", fYearNone: "Not set", fPriceGroup: "Group session (DZD)", fPriceIndividual: "Private 1-on-1 (DZD)",
       fDate: "Start date", fTime: "Time", view: "View",
+      backToDash: "Back to dashboard", previewTag: "Admin preview — what students see",
+      exportAll: "Export all (Excel)", exportLevel: "Export {level}", exportYear: "Export {year}",
+      colEmail: "Email", colPhone: "Phone", toastExported: "Student list exported.",
     },
     review: {
       title: "Ratings & reviews", outOf5: "{avg} out of 5", basedOn: "{n} reviews", noReviews: "No reviews yet",
@@ -613,6 +616,9 @@ export const translations = {
       allStreams: "Toutes les filières",
       fYear: "Année / filière", fYearNone: "Non définie", fPriceGroup: "Session de groupe (DZD)", fPriceIndividual: "Session individuelle (DZD)",
       fDate: "Date de début", fTime: "Heure", view: "Voir",
+      backToDash: "Retour au tableau de bord", previewTag: "Aperçu admin — ce que voient les étudiants",
+      exportAll: "Tout exporter (Excel)", exportLevel: "Exporter {level}", exportYear: "Exporter {year}",
+      colEmail: "E-mail", colPhone: "Téléphone", toastExported: "Liste des étudiants exportée.",
     },
     review: {
       title: "Notes & avis", outOf5: "{avg} sur 5", basedOn: "{n} avis", noReviews: "Aucun avis pour l'instant",
@@ -1158,6 +1164,9 @@ export const translations = {
       allStreams: "كل الشعب",
       fYear: "السنة / الشعبة", fYearNone: "غير محددة", fPriceGroup: "حصة جماعية (دج)", fPriceIndividual: "حصة فردية (دج)",
       fDate: "تاريخ البدء", fTime: "الوقت", view: "عرض",
+      backToDash: "العودة إلى لوحة التحكم", previewTag: "معاينة المشرف — ما يراه الطلاب",
+      exportAll: "تصدير الكل (Excel)", exportLevel: "تصدير {level}", exportYear: "تصدير {year}",
+      colEmail: "البريد الإلكتروني", colPhone: "الهاتف", toastExported: "تم تصدير قائمة الطلاب.",
     },
     review: {
       title: "التقييمات والمراجعات", outOf5: "{avg} من 5", basedOn: "{n} مراجعة", noReviews: "لا توجد مراجعات بعد",
