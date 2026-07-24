@@ -9,7 +9,6 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
 import { setIdentity, setSignupProfile } from "@/lib/student";
 import { recordRegistration } from "@/lib/registeredStudents";
-import { setActiveMentor, isMentorEmail } from "@/lib/mentor";
 import { tr } from "@/data/localized";
 import { CYCLES, YEARS, streamsForYear, Cycle } from "@/data/education";
 import styles from "./AuthForm.module.css";
@@ -29,6 +28,8 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [show, setShow] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [success, setSuccess] = useState(false);
+  // inline login error message (wrong password, etc.) shown under the field
+  const [loginError, setLoginError] = useState<string | null>(null);
 
   // Controlled fields that drive the cascading education section + minor check.
   const [age, setAge] = useState("");
@@ -166,23 +167,53 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     router.push("/dashboard");
   };
 
-  const handleLogin = (e: FormEvent<HTMLFormElement>) => {
+  const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setLoginError(null); // clear any previous error
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") ?? "").trim();
+    const password = String(data.get("password") ?? "");
 
-    // Mock login: role is inferred from the email (mentor addresses land on the
-    // mentor dashboard), then start a session and route accordingly.
-    if (isMentorEmail(email)) {
-      const account = setActiveMentor(email);
-      login({ name: account.name, email: account.email, role: "mentor" });
-      router.push("/mentor-dashboard");
+    const supabase = createClient();
+
+    // 1. Check the password and start a session (Supabase does the hashing).
+    const { data: auth, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error || !auth.user) {
+      // Show a friendly red message under the password field.
+      setLoginError(t("auth.invalidLogin"));
       return;
     }
-    const name = nameFromEmail(email);
-    login({ name, email, role: "student" });
+
+    // 2. Read this user's profile to learn their name + role.
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("name, role")
+      .eq("id", auth.user.id)
+      .single();
+
+    const name = profile?.name ?? nameFromEmail(email);
+    const role = profile?.role === "mentor" ? "mentor" : "student";
+
+    // 3. TEMPORARY: keep the old localStorage session so the current UI works.
+    login({ name, email, role });
     setIdentity(name, email);
-    router.push("/dashboard");
+
+    // 4. Route by role.
+    router.push(role === "mentor" ? "/mentor-dashboard" : "/dashboard");
+  };
+
+  // Sign in with Google (OAuth). Redirects to Google, then back to /auth/callback.
+  const handleGoogle = async () => {
+    setLoginError(null);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    if (error) setLoginError(error.message);
   };
 
   const isRegister = mode === "register";
@@ -230,7 +261,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                   </div>
                 </div>
 
-                <div className={styles.formGroup}>
+                <div
+                  className={`${styles.formGroup} ${loginError ? styles.formGroupError : ""}`}
+                >
                   <label htmlFor="login-password">{t("auth.passwordLabel")}</label>
                   <div className={`${styles.inputWithIcon} ${styles.passwordField}`}>
                     <i className="fa fa-lock"></i>
@@ -250,6 +283,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                       <i className={`fa ${show.login ? "fa-eye-slash" : "fa-eye"}`}></i>
                     </button>
                   </div>
+                  {loginError && (
+                    <div className={styles.errorMessage}>{loginError}</div>
+                  )}
                 </div>
 
                 <div className={styles.formOptions}>
@@ -509,7 +545,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
             <div className={styles.divider}>
               <span>{t("auth.orContinue")}</span>
             </div>
-            <button type="button" className={styles.googleBtn}>
+            <button type="button" className={styles.googleBtn} onClick={handleGoogle}>
               <i className="fa fa-google"></i> {t("auth.google")}
             </button>
 
