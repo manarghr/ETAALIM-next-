@@ -1,5 +1,7 @@
 "use client";
 
+import {createClient} from "@/lib/supabase/client";
+
 import { useState, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -47,7 +49,8 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     setYear("");
   };
 
-  const handleRegister = (e: FormEvent<HTMLFormElement>) => {
+  
+  const handleRegister = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
@@ -99,6 +102,43 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     const parentPhone = isMinorAge
       ? String(data.get("parentPhone") ?? "").trim()
       : "";
+
+
+    // ===== real Supabase sign-up =====
+    const supabase = createClient();
+
+    // 1. Create the auth user (Supabase hashes the password + starts a session).
+    const { data: auth, error: signUpError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+    if (signUpError || !auth.user) {
+      // Show the real reason; don't falsely blame the email field.
+      alert(signUpError?.message ?? "Sign-up failed");
+      return;
+    }
+
+    // 2. Save the rest of their profile — SAME id as the auth user.
+    const { error: profileError } = await supabase.from("profiles").insert({
+      id: auth.user.id,
+      name,
+      email,
+      phone,
+      role: "student",
+      age: ageNum,
+      parent_email: parentEmail || null,
+      parent_phone: parentPhone || null,
+      cycle,
+      year,
+      stream: extra || null,
+    });
+    if (profileError) {
+      alert(profileError.message);
+      return;
+    }
+
+    // 3. TEMPORARY: keep the old localStorage layer alive so the dashboard
+    //    still works while we migrate. We'll remove these in a later step.
     login({ name, email, role: "student" });
     setSignupProfile({
       name,
@@ -111,7 +151,6 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       year,
       extra,
     });
-    // Mirror the registration into the admin's student directory.
     recordRegistration({
       name,
       email,
@@ -123,6 +162,7 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       year,
       extra,
     });
+
     router.push("/dashboard");
   };
 
