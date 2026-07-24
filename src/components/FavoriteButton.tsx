@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { isFavorite, toggleFavorite } from "@/lib/student";
+import { isFavorite, toggleFavorite } from "@/lib/favorites";
 import { AUTH_EVENT } from "@/lib/auth";
 import styles from "./FavoriteButton.module.css";
 
@@ -24,12 +24,11 @@ export default function FavoriteButton({
   const [fav, setFav] = useState(false);
 
   useEffect(() => {
-    // Client-only read, deferred past hydration (see note above).
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    setFav(isFavorite(courseId));
+    isFavorite(courseId).then(setFav);
     // keep in sync if toggled elsewhere (other cards, other tabs)
-    const sync = () => setFav(isFavorite(courseId));
+    const sync = () => isFavorite(courseId).then(setFav);
     window.addEventListener(AUTH_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
@@ -38,11 +37,10 @@ export default function FavoriteButton({
     };
   }, [courseId]);
 
-  const toggle = (e: React.MouseEvent) => {
+  const toggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    toggleFavorite(courseId);
-    const now = isFavorite(courseId);
+    const now = await toggleFavorite(courseId, fav);
     setFav(now);
     onChange?.(now);
     // let other FavoriteButtons on the page update too
