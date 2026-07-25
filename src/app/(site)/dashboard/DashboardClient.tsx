@@ -27,9 +27,9 @@ import {
   isMinor,
   addFunds,
   chargeWallet,
-  toggleFollow,
   Student,
 } from "@/lib/student";
+import { getFollowedMentorIds, toggleFollow } from "@/lib/follows";
 import { addEnrollment, getMyEnrollments, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
 import { getBalance, topUp, getTransactions, WalletTx } from "@/lib/wallet";
@@ -114,6 +114,12 @@ export default function DashboardClient() {
   useEffect(() => {
     getProfile().then(setProfile);
   }, []);
+
+  // Load the mentors the user follows (refreshes on follow/unfollow).
+  const [followedIds, setFollowedIds] = useState<number[]>([]);
+  useEffect(() => {
+    getFollowedMentorIds().then(setFollowedIds);
+  }, [section, tick]);
 
   // Load the purchase history from Supabase whenever the Receipts tab opens.
   useEffect(() => {
@@ -205,7 +211,7 @@ export default function DashboardClient() {
     .map((x, i) => ({ ...x, date: sessionDateFor(i, base) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const followedMentors = student.followedMentorIds
+  const followedMentors = followedIds
     .map((id) => getMentorById(id))
     .filter((m): m is Mentor => Boolean(m));
 
@@ -346,8 +352,8 @@ export default function DashboardClient() {
     }
   };
 
-  const follow = (id: number) => {
-    toggleFollow(id);
+  const follow = async (id: number) => {
+    await toggleFollow(id, followedIds.includes(id));
     reload();
   };
 

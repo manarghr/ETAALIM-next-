@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { useState, useEffect } from "react";
 import { Mentor, mentorYearCodes, TeachTier } from "@/data/mentors";
+import { isFollowing, toggleFollow } from "@/lib/follows";
 import { getCoursesByMentor, formatDate, formatDZD } from "@/data/courses";
 import {
   tr,
@@ -28,6 +30,15 @@ export default function MentorProfileClient({ mentor }: { mentor: Mentor }) {
 
   const displayName = mentorDisplayName(mentor, locale);
 
+  // Follow state (from Supabase).
+  const [following, setFollowing] = useState(false);
+  useEffect(() => {
+    isFollowing(mentor.id).then(setFollowing);
+  }, [mentor.id]);
+  const onFollow = async () => {
+    setFollowing(await toggleFollow(mentor.id, following));
+  };
+
   return (
     <>
       {/* Profile header */}
@@ -51,6 +62,24 @@ export default function MentorProfileClient({ mentor }: { mentor: Mentor }) {
                 4.5 · 128 {t("mentorDetail.reviews")} · {mentor.experience}{" "}
                 {t("mentorDetail.yearsExperience")}
               </div>
+              <button
+                type="button"
+                onClick={onFollow}
+                style={{
+                  marginTop: 12,
+                  padding: "9px 20px",
+                  borderRadius: 999,
+                  border: following ? "1px solid #cbd5e1" : "none",
+                  background: following ? "transparent" : "var(--primary, #534ab7)",
+                  color: following ? "inherit" : "#fff",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                <i className={`fa ${following ? "fa-check" : "fa-plus"}`}></i>{" "}
+                {following ? t("mentorDetail.following") : t("mentorDetail.follow")}
+              </button>
             </div>
           </div>
         </div>

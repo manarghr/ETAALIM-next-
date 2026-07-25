@@ -431,7 +431,7 @@ export const translations = {
       why3d: "Book sessions around your own timetable and learn at your own pace, anytime and anywhere.",
     },
     mentorDetail: {
-      reviews: "reviews", yearsExperience: "years experience",
+      reviews: "reviews", yearsExperience: "years experience", follow: "Follow", following: "Following",
       linkedinProfile: "LinkedIn Profile",
       contact: "Contact", location: "Algiers, Algeria", contactMentor: "Contact Mentor",
       details: "Details", major: "Major", level: "Level", experience: "Experience", years: "years", coursesWord: "Courses", teaches: "Teaches",
@@ -991,7 +991,7 @@ export const translations = {
       why3d: "Réservez vos sessions selon votre emploi du temps et apprenez à votre rythme, à tout moment et où que vous soyez.",
     },
     mentorDetail: {
-      reviews: "avis", yearsExperience: "ans d'expérience",
+      reviews: "avis", yearsExperience: "ans d'expérience", follow: "Suivre", following: "Abonné",
       linkedinProfile: "Profil LinkedIn",
       contact: "Contact", location: "Alger, Algérie", contactMentor: "Contacter le mentor",
       details: "Détails", major: "Spécialité", level: "Niveau", experience: "Expérience", years: "ans", coursesWord: "Cours", teaches: "Enseigne",
@@ -1547,7 +1547,7 @@ export const translations = {
       why3d: "احجز جلساتك وفق جدولك الخاص وتعلّم بالوتيرة التي تناسبك، في أي وقت ومن أي مكان.",
     },
     mentorDetail: {
-      reviews: "تقييم", yearsExperience: "سنوات خبرة",
+      reviews: "تقييم", yearsExperience: "سنوات خبرة", follow: "متابعة", following: "متابَع",
       linkedinProfile: "الملف على لينكدإن",
       contact: "التواصل", location: "الجزائر العاصمة، الجزائر", contactMentor: "تواصل مع المدرّب",
       details: "التفاصيل", major: "التخصّص", level: "المستوى", experience: "الخبرة", years: "سنوات", coursesWord: "الدورات", teaches: "يدرّس",
