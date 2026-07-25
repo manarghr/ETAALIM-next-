@@ -20,7 +20,7 @@ import {
 import { getMentorById } from "@/data/mentors";
 import { educationLabel, Cycle } from "@/data/education";
 import { getLessons } from "@/data/lessons";
-import { progressPct } from "@/lib/progress";
+import { getProgressCounts, pctOf } from "@/lib/progress";
 import FavoriteButton from "@/components/FavoriteButton";
 import { getStudent, isMinor, addFunds, Student } from "@/lib/student";
 import { getFollowedMentorIds, toggleFollow } from "@/lib/follows";
@@ -116,6 +116,12 @@ export default function DashboardClient() {
   useEffect(() => {
     getApprovals().then(setApprovals);
   }, [section, tick]);
+
+  // Load lesson-completion counts (for the My Courses progress bars).
+  const [progressCounts, setProgressCounts] = useState<Record<number, number>>({});
+  useEffect(() => {
+    getProgressCounts().then(setProgressCounts);
+  }, [section]);
 
   // Load the purchase history from Supabase whenever the Receipts tab opens.
   useEffect(() => {
@@ -261,7 +267,7 @@ export default function DashboardClient() {
 
   // Real lesson-completion progress (0 until the student starts a course).
   const progressFor = (c: Course) =>
-    progressPct(c.id, getLessons(c.id, c.major).length);
+    pctOf(progressCounts[c.id] ?? 0, getLessons(c.id, c.major).length);
 
   const priceOf = (c: Course) => getJoinOption(c, "recorded").price;
 

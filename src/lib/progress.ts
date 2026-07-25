@@ -1,58 +1,56 @@
-// Per-course lesson progress, localStorage-backed (mock until the backend
-// tracks real completions). Stores the set of completed lesson ids per course.
-const KEY = "etaalim.progress";
+// Per-course lesson progress, backed by the Supabase `lesson_progress` table.
+// One row = one completed lesson (per user, per course). RLS scopes to the user.
+import { createClient } from "@/lib/supabase/client";
 
-type Progress = Record<number, string[]>;
-
-function readAll(): Progress {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Progress) : {};
-  } catch {
-    return {};
-  }
+// Completed lesson ids for one course.
+export async function getCompleted(courseId: number): Promise<string[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("lesson_progress")
+    .select("lesson_id")
+    .eq("course_id", courseId);
+  return (data ?? []).map((r) => r.lesson_id as string);
 }
 
-function writeAll(p: Progress): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(p));
-  } catch {
-    /* ignore quota / privacy-mode errors */
-  }
-}
-
-export function getCompleted(courseId: number): string[] {
-  return readAll()[courseId] ?? [];
-}
-
-export function isLessonDone(courseId: number, lessonId: string): boolean {
-  return getCompleted(courseId).includes(lessonId);
-}
-
-/** Mark a lesson complete or not. Returns the updated completed-id list. */
-export function setLessonDone(
+// Mark a lesson complete (insert) or incomplete (delete).
+export async function setLessonDone(
   courseId: number,
   lessonId: string,
   done: boolean
-): string[] {
-  const all = readAll();
-  const set = new Set(all[courseId] ?? []);
-  if (done) set.add(lessonId);
-  else set.delete(lessonId);
-  all[courseId] = [...set];
-  writeAll(all);
-  return all[courseId];
+): Promise<void> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  if (done) {
+    await supabase
+      .from("lesson_progress")
+      .upsert({ user_id: user.id, course_id: courseId, lesson_id: lessonId });
+  } else {
+    await supabase
+      .from("lesson_progress")
+      .delete()
+      .eq("course_id", courseId)
+      .eq("lesson_id", lessonId);
+  }
 }
 
-export function toggleLesson(courseId: number, lessonId: string): string[] {
-  return setLessonDone(courseId, lessonId, !isLessonDone(courseId, lessonId));
+// How many lessons the user has completed, per course id.
+export async function getProgressCounts(): Promise<Record<number, number>> {
+  const supabase = createClient();
+  const { data } = await supabase.from("lesson_progress").select("course_id");
+  const map: Record<number, number> = {};
+  (data ?? []).forEach((r) => {
+    const cid = r.course_id as number;
+    map[cid] = (map[cid] ?? 0) + 1;
+  });
+  return map;
 }
 
-/** 0–100, rounded. `total` is the course's lesson count. */
-export function progressPct(courseId: number, total: number): number {
+// 0–100, rounded.
+export function pctOf(completed: number, total: number): number {
   if (total <= 0) return 0;
-  const done = getCompleted(courseId).filter(Boolean).length;
-  return Math.round((Math.min(done, total) / total) * 100);
+  return Math.round((Math.min(completed, total) / total) * 100);
 }

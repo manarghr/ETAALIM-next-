@@ -6,7 +6,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { tr } from "@/data/localized";
 import { Course } from "@/data/courses";
 import { getLessons, Lesson } from "@/data/lessons";
-import { getCompleted, setLessonDone, progressPct } from "@/lib/progress";
+import { getCompleted, setLessonDone, pctOf } from "@/lib/progress";
 import styles from "./CourseLearn.module.css";
 
 const TYPE_ICON: Record<Lesson["type"], string> = {
@@ -37,13 +37,13 @@ export default function CourseLearn({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    setDone(getCompleted(course.id));
+    getCompleted(course.id).then(setDone);
   }, [course.id]);
 
   const isDone = (id: string) => done.includes(id);
   const total = lessons.length;
   const completedCount = mounted ? done.filter(Boolean).length : 0;
-  const pct = mounted ? progressPct(course.id, total) : 0;
+  const pct = mounted ? pctOf(completedCount, total) : 0;
 
   const lessonTitle = (l: Lesson) =>
     l.type === "quiz" ? t("learn.finalQuiz") : tr(l.topic, locale);
@@ -57,8 +57,11 @@ export default function CourseLearn({
     setOpenId(l.id);
   };
 
-  const setDoneState = (id: string, value: boolean) => {
-    setDone(setLessonDone(course.id, id, value));
+  const setDoneState = async (id: string, value: boolean) => {
+    await setLessonDone(course.id, id, value);
+    setDone((prev) =>
+      value ? [...new Set([...prev, id])] : prev.filter((x) => x !== id)
+    );
   };
 
   const openIndex = openId ? lessons.findIndex((l) => l.id === openId) : -1;
