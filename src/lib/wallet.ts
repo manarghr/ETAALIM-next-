@@ -18,3 +18,11 @@ export async function getBalance(): Promise<number | null> {
 
   return data?.balance ?? null;
 }
+
+// add money to the wallet via the top_up function. returns the NEW balance.
+export async function topUp(amount: number): Promise<number> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("top_up", { p_amount: amount });
+  if (error) throw new Error(error.message);
+  return data as number;
+}

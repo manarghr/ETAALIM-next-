@@ -32,7 +32,7 @@ import {
 } from "@/lib/student";
 import { getEnrollments, addEnrollment, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
-import { getBalance } from "@/lib/wallet";
+import { getBalance, topUp } from "@/lib/wallet";
 import {
   getConsentRequests,
   createConsentRequest,
@@ -288,11 +288,17 @@ export default function DashboardClient() {
 
   // Called by TopUpModal after the (mock) payment succeeds — the wallet is
   // only credited once the user has gone through the payment form.
-  const completeTopUp = (amount: number) => {
-    addFunds(amount);
+  const completeTopUp = async (amount: number) => {
     setTopUpAmount(null);
-    reload();
-    showToast(t("dash.toastToppedUp", { amount: money(amount) }));
+    try {
+      const newBalance = await topUp(amount); // real: adds money + logs it
+      setBalance(newBalance); // update the displayed balance right away
+      addFunds(amount); // TEMP: keep the old localStorage wallet in sync
+      reload();
+      showToast(t("dash.toastToppedUp", { amount: money(amount) }));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Top-up failed");
+    }
   };
 
   const follow = (id: number) => {
