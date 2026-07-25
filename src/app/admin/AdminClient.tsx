@@ -25,8 +25,8 @@ import {
 } from "@/data/courses";
 import CourseBanner from "@/components/CourseBanner";
 import { cssVars, categoryAccent } from "@/lib/theme";
-import { students, CYCLE_ORDER, StudentRecord } from "@/data/students";
-import { getRegisteredStudents } from "@/lib/registeredStudents";
+import { CYCLE_ORDER, StudentRecord } from "@/data/students";
+import { getAllStudents } from "@/lib/adminStudents";
 import { YEARS, educationLabel, Cycle } from "@/data/education";
 import { getReviews, averageRating, reviewCount } from "@/lib/reviews";
 import { isAdminUnlocked, unlockAdmin, lockAdmin } from "@/lib/admin";
@@ -122,8 +122,7 @@ export default function AdminClient() {
   const [mentorSearch, setMentorSearch] = useState("");
 
   // Students = demo directory + everyone who registered through the signup form.
-  const [registered, setRegistered] = useState<StudentRecord[]>([]);
-  const allStudents = useMemo(() => [...registered, ...students], [registered]);
+  const [allStudents, setAllStudents] = useState<StudentRecord[]>([]);
 
   // Course management
   const [adminCourses, setAdminCourses] = useState<AdminCourse[]>([]);
@@ -138,7 +137,7 @@ export default function AdminClient() {
     setMounted(true);
     setUnlocked(isAdminUnlocked());
     getAdminCourses().then(setAdminCourses);
-    setRegistered(getRegisteredStudents());
+    getAllStudents().then(setAllStudents);
   }, []);
 
   // Escape closes whichever modal is open.

@@ -1,11 +1,10 @@
 "use client";
 
-// Fallback for student ids that aren't in the demo directory — i.e. accounts
-// registered through the signup form, which live client-side.
+// Resolves a student by id from Supabase (real registered accounts).
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { StudentRecord } from "@/data/students";
-import { getRegisteredStudent } from "@/lib/registeredStudents";
+import { getStudentById } from "@/lib/adminStudents";
 import StudentProfileClient from "./StudentProfileClient";
 
 export default function StudentResolver({ id }: { id: string }) {
@@ -13,8 +12,7 @@ export default function StudentResolver({ id }: { id: string }) {
   const [student, setStudent] = useState<StudentRecord | null | undefined>(undefined);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setStudent(getRegisteredStudent(id) ?? null);
+    getStudentById(id).then((s) => setStudent(s));
   }, [id]);
 
   useEffect(() => {
