@@ -1,9 +1,9 @@
 "use client";
 
+import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getSession } from "@/lib/auth";
 import CourseBanner from "@/components/CourseBanner";
 import TopUpModal from "@/components/TopUpModal";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -111,12 +111,15 @@ export default function DashboardClient() {
   }, [section]);
 
   useEffect(() => {
-    // Gate: the dashboard is only for signed-in users.
-    if (!getSession()) {
-      router.replace("/login");
-      return;
-    }
-    setMounted(true);
+    // Gate: a real supabase, logged-in user can see the dashboard
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data: { user }}) => {
+      if (!user) {
+        router.replace("/login"); 
+      } else {
+        setMounted(true); //confirmed -> show the dahsboard
+      }
+    });
   }, [router]);
 
   const reload = () => setTick((n) => n + 1);

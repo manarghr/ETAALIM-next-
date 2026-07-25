@@ -6,8 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import LanguageSwitcher from "./LanguageSwitcher";
 import UserMenu from "./UserMenu";
 import { useI18n } from "@/i18n/I18nProvider";
-import { getSession, logout, AUTH_EVENT, Session } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./Header.module.css";
+import { getSession, logout, AUTH_EVENT, Session } from "@/lib/auth";
 
 // Dashboard isn't a nav link — signed-in users reach it from the profile menu.
 const links = [
@@ -39,14 +40,17 @@ export default function Header() {
     };
   }, []);
 
-  const onLogout = () => {
-    logout();
+  const onLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut(); // end the REAL Supabase session
+    logout();                      // clear the old fake session too
     setOpen(false);
     router.push("/");
   };
 
   // close the drawer on navigation
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setOpen(false);
   }, [pathname]);
 
