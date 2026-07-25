@@ -85,7 +85,7 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
               >
                 {major}
               </span>
-              <span className={styles.categoryTag}>{level}</span>
+              
               <span className={styles.categoryTag}>
                 <i className="fa fa-graduation-cap"></i> {tr(course.tier, locale)}
               </span>

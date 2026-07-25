@@ -31,9 +31,9 @@ export default function CheckoutClient({
   // Apply the admin's live price/subject edits (stored client-side) on mount.
   const [liveCourse, setLiveCourse] = useState<Course>(course);
   useEffect(() => {
-    const eff = effectiveCourse(course.id);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (eff) setLiveCourse(eff);
+    effectiveCourse(course.id).then((eff) => {
+      if (eff) setLiveCourse(eff);
+    });
   }, [course.id]);
   const liveOption = getJoinOption(liveCourse, option.mode);
 

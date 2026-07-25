@@ -402,10 +402,7 @@ export default function CoursesClient({
                         {mentor ? mentorDisplayName(mentor, locale) : ""}
                       </div>
                       <div className={styles.meta}>
-                        <span>
-                          <i className="fa fa-signal"></i>
-                          {tr(course.level, locale)}
-                        </span>
+                      
                         <span>
                           <i className="fa fa-layer-group"></i>
                           {t(`coursesPage.tracks.${course.track}`)}
