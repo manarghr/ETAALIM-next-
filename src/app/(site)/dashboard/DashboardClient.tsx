@@ -32,7 +32,9 @@ import {
 } from "@/lib/student";
 import { addEnrollment, getMyEnrollments, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
-import { getBalance, topUp } from "@/lib/wallet";
+import { getBalance, topUp, getTransactions, WalletTx } from "@/lib/wallet";
+import { getFavoriteIds } from "@/lib/favorites";
+import { getProfile, Profile } from "@/lib/profile";
 import {
   getConsentRequests,
   createConsentRequest,
@@ -94,6 +96,24 @@ export default function DashboardClient() {
   useEffect(() => {
     getMyEnrollments().then(setEnrollments);
   }, [section]);
+
+  // Load the user's real favorites (refreshes when a star is toggled).
+  const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  useEffect(() => {
+    getFavoriteIds().then(setFavoriteIds);
+  }, [section, tick]);
+
+  // Load the real wallet history (top-ups + purchases).
+  const [transactions, setTransactions] = useState<WalletTx[]>([]);
+  useEffect(() => {
+    getTransactions().then(setTransactions);
+  }, [section, tick]);
+
+  // Load the real profile (name + grade shown in the sidebar / welcome).
+  const [profile, setProfile] = useState<Profile | null>(null);
+  useEffect(() => {
+    getProfile().then(setProfile);
+  }, []);
 
   // Load the purchase history from Supabase whenever the Receipts tab opens.
   useEffect(() => {
@@ -157,6 +177,26 @@ export default function DashboardClient() {
   const student = getStudent();
   const consent = getConsentRequests();
 
+  // Identity shown in the UI comes from the real profile (falls back to the
+  // cached localStorage identity until it loads).
+  const displayName = profile?.name || student.name;
+  const displayInitials = displayName
+    .split(" ")
+    .map((w) => w[0])
+    .slice(0, 2)
+    .join("")
+    .toUpperCase();
+  const displayGrade = profile?.cycle
+    ? educationLabel(
+        {
+          cycle: profile.cycle as Cycle,
+          year: profile.year ?? "",
+          extra: profile.stream ?? "",
+        },
+        locale
+      )
+    : gradeLabel(student);
+
   const enrolledCourses = enrollments
     .map((e) => ({ e, course: getCourseById(e.courseId) }))
     .filter((x): x is { e: Enrollment; course: Course } => Boolean(x.course));
@@ -174,7 +214,7 @@ export default function DashboardClient() {
     .filter((c) => c.tier === "High School")
     .slice(0, 4);
 
-  const savedCourses = student.favoriteCourseIds
+  const savedCourses = favoriteIds
     .map((id) => getCourseById(id))
     .filter((c): c is Course => Boolean(c));
 
@@ -225,15 +265,13 @@ export default function DashboardClient() {
   const priceOf = (c: Course) => getJoinOption(c, "recorded").price;
 
   // ----- actions -----
-  const confirmBuy = () => {
+  const confirmBuy = async () => {
     const c = buyTarget;
     if (!c) return;
     const price = priceOf(c);
-    if (student.balance < price) {
-      setBuyTarget(null);
-      showToast(t("dash.toastInsufficient"));
-      return;
-    }
+    setBuyTarget(null);
+
+    // Minors still go through the (localStorage) parental-consent flow for now.
     if (isMinor(student)) {
       createConsentRequest({
         courseId: c.id,
@@ -242,21 +280,31 @@ export default function DashboardClient() {
         mode: "recorded",
         parentEmail: student.parentEmail,
       });
-      setBuyTarget(null);
       reload();
       showToast(t("dash.toastApprovalSent", { email: student.parentEmail }));
       return;
     }
-    chargeWallet(price, c.subject);
-    addEnrollment({
-      courseId: c.id,
-      mode: "recorded",
-      ref: "WAL-" + c.id,
-      date: new Date().toISOString(),
-    });
-    setBuyTarget(null);
-    reload();
-    showToast(t("dash.toastEnrolled", { course: tr(c.subject, locale) }));
+
+    // Real purchase: the same safe transaction the checkout page uses.
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.rpc("enroll_in_course", {
+        p_course_id: c.id,
+        p_mode: "recorded",
+        p_price: price,
+        p_subject: c.subject,
+      });
+      if (error) {
+        showToast(error.message); // "Insufficient balance" / "Already enrolled"
+        return;
+      }
+      const b = await getBalance();
+      if (b !== null) setBalance(b);
+      reload();
+      showToast(t("dash.toastEnrolled", { course: tr(c.subject, locale) }));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Purchase failed");
+    }
   };
 
   const approveConsent = (reqId: string) => {
@@ -326,9 +374,9 @@ export default function DashboardClient() {
           {/* ===== Sidebar ===== */}
           <aside className={styles.sidebar}>
             <div className={styles.profile}>
-              <div className={styles.avatar}>{student.initials}</div>
-              <div className={styles.pName}>{student.name}</div>
-              <div className={styles.pGrade}>{gradeLabel(student)}</div>
+              <div className={styles.avatar}>{displayInitials}</div>
+              <div className={styles.pName}>{displayName}</div>
+              <div className={styles.pGrade}>{displayGrade}</div>
             </div>
 
             <div className={styles.walletMini}>
@@ -370,7 +418,7 @@ export default function DashboardClient() {
               <section>
                 <div className={styles.panelHead}>
                   <h1>
-                    {t("dash.welcome", { name: student.name.split(" ")[0] })}
+                    {t("dash.welcome", { name: displayName.split(" ")[0] })}
                   </h1>
                   <p>{t("dash.welcomeSub")}</p>
                 </div>
@@ -780,7 +828,7 @@ export default function DashboardClient() {
 
                 <h3 className={styles.blockTitle}>{t("dash.transactions")}</h3>
                 <div className={styles.txList}>
-                  {student.wallet.map((tx) => (
+                  {transactions.map((tx) => (
                     <div key={tx.id} className={styles.txItem}>
                       <span
                         className={styles.txIcon}
@@ -796,7 +844,7 @@ export default function DashboardClient() {
                             ? t("dash.txTopup")
                             : tx.subject
                             ? t("dash.txCourse", { subject: tr(tx.subject, locale) })
-                            : tx.label ?? ""}
+                            : ""}
                         </b>
                         <span>{formatDate(tx.date.slice(0, 10), locale)}</span>
                       </div>

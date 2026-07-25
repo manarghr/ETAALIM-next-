@@ -26,3 +26,27 @@ export async function topUp(amount: number): Promise<number> {
   if (error) throw new Error(error.message);
   return data as number;
 }
+
+export interface WalletTx {
+  id: number;
+  type: "topup" | "purchase";
+  amount: number;
+  subject: string | null; // English course subject (for purchases)
+  date: string;
+}
+
+// The user's wallet history (top-ups + purchases), newest first.
+export async function getTransactions(): Promise<WalletTx[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("transactions")
+    .select("id, type, amount, subject, created_at")
+    .order("created_at", { ascending: false });
+  return (data ?? []).map((t) => ({
+    id: t.id as number,
+    type: (t.type as string) === "topup" ? "topup" : "purchase",
+    amount: t.amount as number,
+    subject: (t.subject as string) ?? null,
+    date: t.created_at as string,
+  }));
+}

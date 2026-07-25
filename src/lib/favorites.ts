@@ -34,6 +34,13 @@ export async function toggleFavorite(
         course_id: courseId,
     });
 
-    return true;;
+    return true;
+}
 
- }
+// all course ids the current user has favorited.
+export async function getFavoriteIds(): Promise<number[]> {
+  const supabase = createClient();
+  const { data } = await supabase.from("favorites").select("course_id");
+  return (data ?? []).map((r) => r.course_id as number);
+}
+ 
