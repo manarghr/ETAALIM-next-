@@ -22,24 +22,14 @@ import { educationLabel, Cycle } from "@/data/education";
 import { getLessons } from "@/data/lessons";
 import { progressPct } from "@/lib/progress";
 import FavoriteButton from "@/components/FavoriteButton";
-import {
-  getStudent,
-  isMinor,
-  addFunds,
-  chargeWallet,
-  Student,
-} from "@/lib/student";
+import { getStudent, isMinor, addFunds, Student } from "@/lib/student";
 import { getFollowedMentorIds, toggleFollow } from "@/lib/follows";
-import { addEnrollment, getMyEnrollments, Enrollment } from "@/lib/enrollment";
+import { getMyEnrollments, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
 import { getBalance, topUp, getTransactions, WalletTx } from "@/lib/wallet";
 import { getFavoriteIds } from "@/lib/favorites";
 import { getProfile, Profile } from "@/lib/profile";
-import {
-  getConsentRequests,
-  createConsentRequest,
-  setConsentStatus,
-} from "@/lib/consent";
+import { getApprovals, createApproval, setApprovalStatus, Approval } from "@/lib/approvals";
 import { sessionDateFor, countdownOf, isSoon, DISCOUNTS } from "@/lib/schedule";
 import ChatDock from "@/components/ChatDock";
 import styles from "./dashboard.module.css";
@@ -121,6 +111,12 @@ export default function DashboardClient() {
     getFollowedMentorIds().then(setFollowedIds);
   }, [section, tick]);
 
+  // Load the parental-consent requests (minors' pending purchases).
+  const [approvals, setApprovals] = useState<Approval[]>([]);
+  useEffect(() => {
+    getApprovals().then(setApprovals);
+  }, [section, tick]);
+
   // Load the purchase history from Supabase whenever the Receipts tab opens.
   useEffect(() => {
     if (section === "receipts") {
@@ -181,7 +177,6 @@ export default function DashboardClient() {
   // ----- derived state (re-read on every render; cheap) -----
   void tick;
   const student = getStudent();
-  const consent = getConsentRequests();
 
   // Identity shown in the UI comes from the real profile (falls back to the
   // cached localStorage identity until it loads).
@@ -224,7 +219,7 @@ export default function DashboardClient() {
     .map((id) => getCourseById(id))
     .filter((c): c is Course => Boolean(c));
 
-  const pendingConsent = consent.filter((c) => c.status === "pending");
+  const pendingConsent = approvals.filter((a) => a.status === "pending");
 
   const notifications = [
     ...sessions
@@ -248,7 +243,7 @@ export default function DashboardClient() {
       text: t("dash.notifConsentText", {
         course: tr(c.courseName, locale),
         amount: money(c.amount),
-        email: c.parentEmail,
+        email: c.parentEmail ?? "",
       }),
       tag: "",
     })),
@@ -277,9 +272,9 @@ export default function DashboardClient() {
     const price = priceOf(c);
     setBuyTarget(null);
 
-    // Minors still go through the (localStorage) parental-consent flow for now.
+    // Minors go through the parental-consent flow (a pending approval request).
     if (isMinor(student)) {
-      createConsentRequest({
+      await createApproval({
         courseId: c.id,
         courseName: c.subject,
         amount: price,
@@ -313,26 +308,33 @@ export default function DashboardClient() {
     }
   };
 
-  const approveConsent = (reqId: string) => {
-    const req = consent.find((r) => r.id === reqId);
+  const approveConsent = async (reqId: number) => {
+    const req = approvals.find((r) => r.id === reqId);
     if (!req) return;
-    if (!chargeWallet(req.amount, req.courseName)) {
-      showToast(t("dash.toastInsufficientApprove"));
-      return;
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.rpc("enroll_in_course", {
+        p_course_id: req.courseId,
+        p_mode: req.mode,
+        p_price: req.amount,
+        p_subject: req.courseName,
+      });
+      if (error) {
+        showToast(error.message);
+        return;
+      }
+      await setApprovalStatus(req.id, "approved");
+      const b = await getBalance();
+      if (b !== null) setBalance(b);
+      reload();
+      showToast(t("dash.toastApproved"));
+    } catch (e) {
+      showToast(e instanceof Error ? e.message : "Failed");
     }
-    addEnrollment({
-      courseId: req.courseId,
-      mode: req.mode,
-      ref: "WAL-" + req.courseId,
-      date: new Date().toISOString(),
-    });
-    setConsentStatus(reqId, "approved");
-    reload();
-    showToast(t("dash.toastApproved"));
   };
 
-  const denyConsent = (reqId: string) => {
-    setConsentStatus(reqId, "denied");
+  const denyConsent = async (reqId: number) => {
+    await setApprovalStatus(reqId, "denied");
     reload();
     showToast(t("dash.toastDenied"));
   };
@@ -493,7 +495,7 @@ export default function DashboardClient() {
                         <div>
                           <b>{tr(c.courseName, locale)}</b> · {money(c.amount)}
                           <div className={styles.consentMeta}>
-                            {t("dash.approvalsMeta", { email: c.parentEmail })}
+                            {t("dash.approvalsMeta", { email: c.parentEmail ?? "" })}
                           </div>
                         </div>
                         <div className={styles.consentActions}>
