@@ -31,6 +31,7 @@ import {
   Student,
 } from "@/lib/student";
 import { getEnrollments, addEnrollment, Enrollment } from "@/lib/enrollment";
+import { getReceipts, Receipt } from "@/lib/receipts";
 import {
   getConsentRequests,
   createConsentRequest,
@@ -48,6 +49,7 @@ type Section =
   | "mentors"
   | "calendar"
   | "wallet"
+  | "receipts"
   | "notifications";
 
 const NAV: { key: Section; labelKey: string; icon: string }[] = [
@@ -57,6 +59,7 @@ const NAV: { key: Section; labelKey: string; icon: string }[] = [
   { key: "mentors", labelKey: "dash.navMentors", icon: "fa-users" },
   { key: "calendar", labelKey: "dash.navSchedule", icon: "fa-calendar" },
   { key: "wallet", labelKey: "dash.navWallet", icon: "fa-money" },
+  { key: "receipts", labelKey: "dash.navReceipts", icon: "fa-file-text-o" },
   { key: "notifications", labelKey: "dash.navNotifications", icon: "fa-bell" },
 ];
 
@@ -82,6 +85,14 @@ export default function DashboardClient() {
   const [chatMentor, setChatMentor] = useState<number | null>(null);
   const [chatMin, setChatMin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+
+  // Load the purchase history from Supabase whenever the Receipts tab opens.
+  useEffect(() => {
+    if (section === "receipts") {
+      getReceipts().then(setReceipts);
+    }
+  }, [section]);
 
   useEffect(() => {
     // Gate: the dashboard is only for signed-in users.
@@ -785,6 +796,41 @@ export default function DashboardClient() {
                     </div>
                   ))}
                 </div>
+              </section>
+            )}
+
+            {/* -------- Receipts (purchase history from Supabase) -------- */}
+            {section === "receipts" && (
+              <section>
+                <div className={styles.panelHead}>
+                  <h1>{t("dash.navReceipts")}</h1>
+                  <p>{t("dash.receiptsSub")}</p>
+                </div>
+
+                {receipts.length === 0 ? (
+                  <p className={styles.muted}>{t("dash.noReceipts")}</p>
+                ) : (
+                  <div className={styles.txList}>
+                    {receipts.map((r) => {
+                      const c = getCourseById(r.courseId);
+                      return (
+                        <div key={r.id} className={styles.txItem}>
+                          <span className={styles.txIcon} style={{ color: "#534ab7" }}>
+                            <i className="fa fa-file-text-o"></i>
+                          </span>
+                          <div className={styles.txInfo}>
+                            <b>{c ? tr(c.subject, locale) : `#${r.courseId}`}</b>
+                            <span>
+                              {t("dash.receiptRef", { ref: r.ref })} ·{" "}
+                              {formatDate(r.date.slice(0, 10), locale)}
+                            </span>
+                          </div>
+                          <span className={styles.txNeg}>−{money(r.price)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             )}
 
