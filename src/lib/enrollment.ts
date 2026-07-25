@@ -1,11 +1,29 @@
 // Client-side enrollment store. Persists which courses the user has "unlocked"
 // in localStorage so the course page reflects it — a stand-in until the backend
 // (accounts + real enrollments) lands.
+import { createClient } from "@/lib/supabase/client";
+
 export interface Enrollment {
   courseId: number;
   mode: string;
   ref: string;
   date: string; // ISO
+}
+
+// The logged-in user's real enrollments from Supabase (RLS returns only theirs).
+export async function getMyEnrollments(): Promise<Enrollment[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("enrollments")
+    .select("course_id, mode, ref, created_at")
+    .order("created_at", { ascending: false });
+
+  return (data ?? []).map((e) => ({
+    courseId: e.course_id,
+    mode: e.mode,
+    ref: e.ref,
+    date: e.created_at,
+  }));
 }
 
 const KEY = "etaalim.enrollments";

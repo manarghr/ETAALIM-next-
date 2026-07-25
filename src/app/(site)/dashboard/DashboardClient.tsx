@@ -30,7 +30,7 @@ import {
   toggleFollow,
   Student,
 } from "@/lib/student";
-import { getEnrollments, addEnrollment, Enrollment } from "@/lib/enrollment";
+import { addEnrollment, getMyEnrollments, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
 import { getBalance, topUp } from "@/lib/wallet";
 import {
@@ -88,6 +88,12 @@ export default function DashboardClient() {
   const [toast, setToast] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+
+  // Load the user's real purchased courses from Supabase.
+  useEffect(() => {
+    getMyEnrollments().then(setEnrollments);
+  }, [section]);
 
   // Load the purchase history from Supabase whenever the Receipts tab opens.
   useEffect(() => {
@@ -109,17 +115,6 @@ export default function DashboardClient() {
     if (!getSession()) {
       router.replace("/login");
       return;
-    }
-    // seed a few enrollments so the dashboard has content on first visit
-    if (getEnrollments().length === 0) {
-      [1, 2, 4].forEach((id) =>
-        addEnrollment({
-          courseId: id,
-          mode: "recorded",
-          ref: "SEED-" + id,
-          date: new Date().toISOString(),
-        })
-      );
     }
     setMounted(true);
   }, [router]);
@@ -157,7 +152,6 @@ export default function DashboardClient() {
   // ----- derived state (re-read on every render; cheap) -----
   void tick;
   const student = getStudent();
-  const enrollments = getEnrollments();
   const consent = getConsentRequests();
 
   const enrolledCourses = enrollments
