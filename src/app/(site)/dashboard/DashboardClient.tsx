@@ -32,6 +32,7 @@ import {
 } from "@/lib/student";
 import { getEnrollments, addEnrollment, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
+import { getBalance } from "@/lib/wallet";
 import {
   getConsentRequests,
   createConsentRequest,
@@ -86,12 +87,21 @@ export default function DashboardClient() {
   const [chatMin, setChatMin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [balance, setBalance] = useState<number | null>(null);
 
   // Load the purchase history from Supabase whenever the Receipts tab opens.
   useEffect(() => {
     if (section === "receipts") {
       getReceipts().then(setReceipts);
     }
+  }, [section]);
+
+  // Keep the real wallet balance fresh as the user navigates the dashboard.
+  // Ignore null (a transient auth miss) so it never wipes a loaded value.
+  useEffect(() => {
+    getBalance().then((b) => {
+      if (b !== null) setBalance(b);
+    });
   }, [section]);
 
   useEffect(() => {
@@ -320,7 +330,7 @@ export default function DashboardClient() {
 
             <div className={styles.walletMini}>
               <span className={styles.wmLabel}>{t("dash.walletBalance")}</span>
-              <span className={styles.wmValue}>{money(student.balance)}</span>
+              <span className={styles.wmValue}>{money(balance ?? student.balance)}</span>
             </div>
 
             <nav className={styles.nav}>
@@ -381,7 +391,7 @@ export default function DashboardClient() {
                     <span className={styles.statIcon} style={{ color: "#e0894a" }}>
                       <i className="fa fa-money"></i>
                     </span>
-                    <span className={styles.statValue}>{money(student.balance)}</span>
+                    <span className={styles.statValue}>{money(balance ?? student.balance)}</span>
                     <span className={styles.statLabel}>{t("dash.walletBalance")}</span>
                   </div>
                   <div className={styles.statCard}>
@@ -719,7 +729,7 @@ export default function DashboardClient() {
 
                 <div className={styles.walletCard}>
                   <span className={styles.wcLabel}>{t("dash.availableBalance")}</span>
-                  <span className={styles.wcBalance}>{money(student.balance)}</span>
+                  <span className={styles.wcBalance}>{money(balance ?? student.balance)}</span>
                   <div className={styles.topupRow}>
                     {TOPUP_AMOUNTS.map((a) => (
                       <button
