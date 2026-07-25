@@ -7,6 +7,7 @@ import { effectiveCourse } from "@/lib/catalog";
 import { getMentorById } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
 import { addEnrollment } from "@/lib/enrollment";
+import {createClient} from "@/lib/supabase/client";
 import { useI18n } from "@/i18n/I18nProvider";
 import CourseBanner from "@/components/CourseBanner";
 import styles from "./page.module.css";
@@ -25,6 +26,7 @@ export default function CheckoutClient({
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
   const [orderRef, setOrderRef] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   // Apply the admin's live price/subject edits (stored client-side) on mount.
   const [liveCourse, setLiveCourse] = useState<Course>(course);
@@ -41,24 +43,35 @@ export default function CheckoutClient({
   const optionTitle = tr(option.title, locale);
   const price = formatDZD(liveOption.price, locale);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     setSubmitting(true);
-    // Payment processing is mocked until the backend is connected.
-    setTimeout(() => {
-      const ref = "ET-" + Math.floor(100000 + Math.random() * 900000);
-      // Unlock the course locally so the course page reflects it right away.
-      addEnrollment({
-        courseId: course.id,
-        mode: option.mode,
-        ref,
-        date: new Date().toISOString(),
-      });
-      setOrderRef(ref);
-      setSubmitting(false);
-      setDone(true);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }, 1500);
+
+    const supabase = createClient();
+    const { data: ref, error: rpcError } = await supabase.rpc("enroll_in_course", {
+      p_course_id: liveCourse.id,
+      p_mode: option.mode,
+      p_price: liveOption.price,
+      p_subject: liveCourse.subject,
+    });
+
+    setSubmitting(false);
+
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+     addEnrollment({
+      courseId: liveCourse.id,
+      mode: option.mode,
+      ref: ref as string,
+      date: new Date().toISOString(),
+    });
+
+    setOrderRef(ref as string);
+    setDone(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   if (done) {
@@ -218,6 +231,11 @@ export default function CheckoutClient({
                 </div>
               )}
 
+             {error && (
+                <p style={{ color: "#dc3545", marginBottom: 12, fontWeight: 600 }}>
+                  {error}
+                </p>
+              )}
               <button
                 type="submit"
                 className={`btn btn-primary ${styles.payBtn}`}
