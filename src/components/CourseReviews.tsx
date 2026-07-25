@@ -3,14 +3,11 @@
 import { useState, useEffect } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Course, localeTag } from "@/data/courses";
-import { getStudent } from "@/lib/student";
 import {
-  getReviews,
-  addReview,
-  averageRating,
-  reviewCount,
-  Review,
-} from "@/lib/reviews";
+  getCourseReviews,
+  postReview,
+  CourseReview,
+} from "@/lib/courseReviews";
 import styles from "./CourseReviews.module.css";
 
 function Stars({
@@ -48,9 +45,11 @@ export default function CourseReviews({
   const { t, locale } = useI18n();
 
   const [mounted, setMounted] = useState(false);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [avg, setAvg] = useState(0);
-  const [count, setCount] = useState(0);
+  const [reviews, setReviews] = useState<CourseReview[]>([]);
+
+  // Average + count are derived straight from the loaded reviews.
+  const count = reviews.length;
+  const avg = count ? reviews.reduce((s, r) => s + r.rating, 0) / count : 0;
 
   // Form state
   const [rating, setRating] = useState(0);
@@ -58,13 +57,11 @@ export default function CourseReviews({
   const [text, setText] = useState("");
   const [posted, setPosted] = useState(false);
 
-  const refresh = () => {
-    setReviews(getReviews(course.id));
-    setAvg(averageRating(course.id));
-    setCount(reviewCount(course.id));
+  const refresh = async () => {
+    setReviews(await getCourseReviews(course.id));
   };
 
-  // Client-only read (localStorage), deferred past hydration.
+  // Load reviews from Supabase on mount.
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
@@ -72,15 +69,18 @@ export default function CourseReviews({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [course.id]);
 
-  const submit = () => {
+  const submit = async () => {
     if (rating === 0) return;
-    const name = getStudent().name || t("review.you");
-    addReview(course.id, name, rating, text.trim());
-    setRating(0);
-    setText("");
-    setPosted(true);
-    refresh();
-    setTimeout(() => setPosted(false), 3500);
+    try {
+      await postReview(course.id, rating, text.trim());
+      setRating(0);
+      setText("");
+      setPosted(true);
+      await refresh();
+      setTimeout(() => setPosted(false), 3500);
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Could not post review");
+    }
   };
 
   const fmtDate = (iso: string) =>
@@ -90,7 +90,7 @@ export default function CourseReviews({
       day: "numeric",
     });
 
-  const reviewText = (r: Review) => (r.textKey ? t(r.textKey) : r.text ?? "");
+  const reviewText = (r: CourseReview) => r.text ?? "";
 
   return (
     <div>
