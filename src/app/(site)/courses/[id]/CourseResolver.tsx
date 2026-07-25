@@ -15,7 +15,7 @@ export default function CourseResolver({ id }: { id: number }) {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCourse(effectiveCourse(id) ?? null);
+   effectiveCourse(id).then((c) => setCourse(c ?? null));
   }, [id]);
 
   useEffect(() => {

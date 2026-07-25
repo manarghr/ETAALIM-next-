@@ -14,7 +14,7 @@ export default function CheckoutResolver({ id, mode }: { id: number; mode: JoinM
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCourse(effectiveCourse(id) ?? null);
+    effectiveCourse(id).then((c) => setCourse(c ?? null));
   }, [id]);
 
   useEffect(() => {

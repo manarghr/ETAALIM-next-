@@ -69,7 +69,7 @@ export default function CoursesClient({
   const [catalog, setCatalog] = useState<Course[]>(courses);
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCatalog(effectiveCourses());
+    effectiveCourses().then(setCatalog);
   }, []);
 
   // Resolve the current position inside the active tier's drill-down tree.

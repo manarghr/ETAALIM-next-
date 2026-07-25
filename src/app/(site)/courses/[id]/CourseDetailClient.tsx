@@ -29,9 +29,10 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
   // (edited price/description/status…), stored client-side.
   const [course, setCourse] = useState<Course | EffectiveCourse>(baseCourse);
   useEffect(() => {
-    const eff = effectiveCourse(baseCourse.id);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (eff) setCourse(eff);
+    effectiveCourse(baseCourse.id).then((eff) => {
+    
+      if (eff) setCourse(eff);
+    });
   }, [baseCourse.id]);
   const description = "description" in course ? course.description : undefined;
 
