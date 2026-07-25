@@ -90,9 +90,6 @@ const EMPTY_COURSE: AdminCourseInput = {
   mentorIds: [],
 };
 
-// Unique subject fields, for the editor's suggestions list.
-const MAJORS = Array.from(new Set(courses.map((c) => c.major))).sort();
-
 const LANGS: { code: Locale; flag: string }[] = [
   { code: "en", flag: "🇬🇧" },
   { code: "fr", flag: "🇫🇷" },
@@ -140,7 +137,7 @@ export default function AdminClient() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
     setUnlocked(isAdminUnlocked());
-    setAdminCourses(getAdminCourses());
+    getAdminCourses().then(setAdminCourses);
     setRegistered(getRegisteredStudents());
   }, []);
 
@@ -355,32 +352,50 @@ export default function AdminClient() {
     });
     setCourseEditing(c);
   };
-  const saveCourse = (e: FormEvent) => {
+  const saveCourse = async (e: FormEvent) => {
     e.preventDefault();
     if (!cform.subject.trim()) return;
-    if (courseEditing === "new") {
-      setAdminCourses(addAdminCourse({ ...cform, mentorIds: [primaryMentor] }));
-      showToast(t("admin.toastAdded"));
-    } else if (courseEditing) {
-      // Full access: every field is editable (mentors are managed on the card).
-      setAdminCourses(updateAdminCourse(courseEditing.id, cform));
-      showToast(t("admin.toastUpdated"));
-    }
+    const editing = courseEditing;
     setCourseEditing(null);
+    try {
+      if (editing === "new") {
+        setAdminCourses(await addAdminCourse({ ...cform, mentorIds: [primaryMentor] }));
+        showToast(t("admin.toastAdded"));
+      } else if (editing) {
+        // Full access: every field is editable (mentors are managed on the card).
+        setAdminCourses(await updateAdminCourse(editing.id, cform));
+        showToast(t("admin.toastUpdated"));
+      }
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Save failed");
+    }
   };
-  const doDelete = () => {
+  const doDelete = async () => {
     if (!courseDelete) return;
-    setAdminCourses(deleteAdminCourse(courseDelete.id));
+    const id = courseDelete.id;
     setCourseDelete(null);
-    showToast(t("admin.toastDeleted"));
+    try {
+      setAdminCourses(await deleteAdminCourse(id));
+      showToast(t("admin.toastDeleted"));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Delete failed");
+    }
   };
-  const doAssign = (cid: number, mid: number) => {
-    setAdminCourses(assignMentor(cid, mid));
-    showToast(t("admin.toastAssigned"));
+  const doAssign = async (cid: number, mid: number) => {
+    try {
+      setAdminCourses(await assignMentor(cid, mid));
+      showToast(t("admin.toastAssigned"));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed");
+    }
   };
-  const doUnassign = (cid: number, mid: number) => {
-    setAdminCourses(unassignMentor(cid, mid));
-    showToast(t("admin.toastUnassigned"));
+  const doUnassign = async (cid: number) => {
+    try {
+      setAdminCourses(await unassignMentor(cid));
+      showToast(t("admin.toastUnassigned"));
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : "Failed");
+    }
   };
 
   const filteredStudents = allStudents.filter((s) => {
@@ -965,7 +980,7 @@ export default function AdminClient() {
                                       {mentorDisplayName(m, locale)}
                                       <button
                                         type="button"
-                                        onClick={() => doUnassign(c.id, mid)}
+                                        onClick={() => doUnassign(c.id)}
                                         aria-label={t("admin.toastUnassigned")}
                                       >
                                         ×
@@ -1348,19 +1363,9 @@ export default function AdminClient() {
                   <span>{t("admin.fMajor")}</span>
                   <input
                     type="text"
-                    list="admin-majors"
                     value={cform.major}
                     onChange={(e) => setCform({ ...cform, major: e.target.value })}
                   />
-                  <datalist id="admin-majors">
-                    {MAJORS.map((m) => (
-                      <option key={m} value={m} />
-                    ))}
-                  </datalist>
-                </label>
-                <label className={styles.field}>
-                  <span>{t("admin.fLevel")}</span>
-                  <input type="text" value={cform.level} onChange={(e) => setCform({ ...cform, level: e.target.value })} />
                 </label>
               </div>
               <div className={styles.fieldRow}>

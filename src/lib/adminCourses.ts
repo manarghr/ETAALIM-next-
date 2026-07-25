@@ -1,175 +1,130 @@
-// Admin course management, localStorage-backed (mock until Supabase). An
-// overlay on top of the static catalog that lets the admin add, edit, delete,
-// and — importantly — assign SEVERAL mentors to the same course (students then
-// pick the mentor they prefer). Swap the internals for API calls later.
-import { courses, Course, getTrack } from "@/data/courses";
+import { createClient} from "@/lib/supabase/client";
+import { getTrack } from "@/data/courses";
 
 export interface AdminCourseInput {
   subject: string;
   description: string;
   major: string;
   tier: string;
-  /**
-   * Catalog track key (p1…p5, m1…m4, hs_exp_2as…, uni_lic); "" if not set.
-   * For high school this carries the STREAM, not just the year — 1AS splits
-   * into Science/Letters common cores, 2AS/3AS into the five/six streams,
-   * exactly like the student-facing courses page.
-   */
   track: string;
-  level: string;
-  price: number; // self-paced recorded price (DZD)
-  priceGroup: number; // online group session (DZD)
-  priceIndividual: number; // private 1-on-1 session (DZD)
-  date: string; // ISO start date, "" if unscheduled
-  time: string; // HH:MM (24h)
+  level: string; // kept for the UI; no longer stored in the DB
+  price: number;
+  priceGroup: number;
+  priceIndividual: number;
+  date: string;
+  time: string;
   status: "available" | "upcoming";
-  mentorIds: number[]; // one or more mentors delivering this course
+  mentorIds: number[]; // DB stores one mentor; we keep the array shape for the UI
 }
 
 export interface AdminCourse extends AdminCourseInput {
   id: number;
-  /** derived from `track`: Algerian year code (1AP, 4AM, 3AS, Licence…) */
   yearCode: string;
-  custom?: boolean; // admin-created (subject shown as typed)
+  custom?: boolean;
 }
 
-function codeOf(track: string): string {
-  return getTrack(track)?.code ?? "";
+
+const codeOf = (track: string) => getTrack(track)?.code ?? "";
+const yearOf = (code: string) => {
+  const n = parseInt(code, 10);
+  return Number.isFinite(n) ? n : 1;
+};
+
+
+function streamOf(track: string): string | null {
+  if (track.startsWith("hs_exp")) return "Experimental Sciences";
+  if (track.startsWith("hs_math")) return "Mathematics";
+  if (track.startsWith("hs_tech")) return "Technical Mathematics";
+  if (track.startsWith("hs_gest")) return "Management & Economics";
+  if (track.startsWith("hs_philo")) return "Literature & Philosophy";
+  if (track.startsWith("hs_lang")) return "Foreign Languages";
+  if (track === "hs_tc_sci") return "Common Core — Science";
+  if (track === "hs_tc_let") return "Common Core — Letters";
+  return null;
 }
 
-const KEY = "etaalim.adminCourses";
-
-interface Store {
-  added: AdminCourse[];
-  deleted: number[];
-  // partial field overrides for base (catalog) courses, incl. mentorIds
-  overrides: Record<number, Partial<AdminCourseInput>>;
-}
-
-function empty(): Store {
-  return { added: [], deleted: [], overrides: {} };
-}
-
-function read(): Store {
-  if (typeof window === "undefined") return empty();
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? { ...empty(), ...(JSON.parse(raw) as Store) } : empty();
-  } catch {
-    return empty();
-  }
-}
-
-function write(s: Store): Store {
-  if (typeof window !== "undefined") {
-    try {
-      localStorage.setItem(KEY, JSON.stringify(s));
-    } catch {
-      /* ignore */
-    }
-  }
-  return s;
-}
-
-function baseToAdmin(c: Course, ov?: Partial<AdminCourseInput>): AdminCourse {
+// DB row -> AdminCourse (snake_case -> the shape the UI expects)
+function rowToAdmin(r: Record<string, unknown>): AdminCourse {
+  const track = (r.track as string) ?? "";
+  const mentorId = (r.mentor_id as number) ?? 0;
   return {
-    id: c.id,
-    subject: ov?.subject ?? c.subject,
-    description: ov?.description ?? "",
-    major: ov?.major ?? c.major,
-    tier: ov?.tier ?? c.tier,
-    track: ov?.track ?? c.track,
-    yearCode: codeOf(ov?.track ?? c.track),
-    level: ov?.level ?? c.level,
-    price: ov?.price ?? c.price,
-    priceGroup: ov?.priceGroup ?? c.priceGroup,
-    priceIndividual: ov?.priceIndividual ?? c.priceIndividual,
-    date: ov?.date ?? c.date,
-    time: ov?.time ?? c.time,
-    status: ov?.status ?? c.status,
-    mentorIds: ov?.mentorIds ?? [c.mentorId],
-  };
-}
-
-// Fills fields that may be missing from courses saved by an older version.
-function withDefaults(c: AdminCourse): AdminCourse {
-  const track = c.track ?? "";
-  return {
-    ...c,
+    id: r.id as number,
+    subject: (r.subject as string) ?? "",
+    description: (r.description as string) ?? "",
+    major: (r.major as string) ?? "",
+    tier: (r.tier as string) ?? "",
     track,
-    // track drives the code; legacy entries without one keep their stored code
-    yearCode: track ? codeOf(track) : (c.yearCode ?? ""),
-    priceGroup: c.priceGroup ?? 0,
-    priceIndividual: c.priceIndividual ?? 0,
-    date: c.date ?? "",
-    time: c.time ?? "",
+    level: "",
+    price: (r.price as number) ?? 0,
+    priceGroup: (r.price_group as number) ?? 0,
+    priceIndividual: (r.price_individual as number) ?? 0,
+    date: (r.session_date as string) ?? "",
+    time: (r.session_time as string) ?? "",
+    status: (r.status as string) === "upcoming" ? "upcoming" : "available",
+    mentorIds: mentorId ? [mentorId] : [],
+    yearCode: (r.year_code as string) ?? codeOf(track),
   };
 }
 
-/** The effective course list: catalog (minus deleted, plus overrides) + added. */
-export function getAdminCourses(): AdminCourse[] {
-  const s = read();
-  const base = courses
-    .filter((c) => !s.deleted.includes(c.id))
-    .map((c) => baseToAdmin(c, s.overrides[c.id]));
-  return [...s.added.map(withDefaults), ...base];
+
+// AdminCourseInput -> DB columns (only the fields present get written)
+function inputToRow(input: Partial<AdminCourseInput>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (input.subject !== undefined) row.subject = input.subject;
+  if (input.description !== undefined) row.description = input.description || null;
+  if (input.major !== undefined) row.major = input.major;
+  if (input.tier !== undefined) row.tier = input.tier;
+  if (input.track !== undefined) {
+    const code = codeOf(input.track);
+    row.track = input.track;
+    row.year = yearOf(code);
+    row.year_code = code;
+    row.stream = streamOf(input.track);
+  }
+  if (input.price !== undefined) row.price = input.price;
+  if (input.priceGroup !== undefined) row.price_group = input.priceGroup;
+  if (input.priceIndividual !== undefined) row.price_individual = input.priceIndividual;
+  if (input.date !== undefined) row.session_date = input.date || null;
+  if (input.time !== undefined) row.session_time = input.time || null;
+  if (input.status !== undefined) row.status = input.status;
+  if (input.mentorIds !== undefined) row.mentor_id = input.mentorIds[0] ?? null;
+  return row;
 }
 
-export function getAdminCourse(id: number): AdminCourse | undefined {
-  return getAdminCourses().find((c) => c.id === id);
+export async function getAdminCourses(): Promise<AdminCourse[]> {
+  const supabase = createClient();
+  const { data } = await supabase.from("courses").select("*").order("id");
+  return (data ?? []).map(rowToAdmin);
 }
 
-export function addAdminCourse(input: AdminCourseInput): AdminCourse[] {
-  const s = read();
-  s.added.unshift({
-    id: 2_000_000 + Math.floor(Math.random() * 1_000_000),
-    ...input,
-    yearCode: codeOf(input.track),
-    custom: true,
-  });
-  write(s);
+export async function addAdminCourse(input: AdminCourseInput): Promise<AdminCourse[]> {
+  const supabase = createClient();
+  const { error } = await supabase.from("courses").insert(inputToRow(input));
+  if (error) throw new Error(error.message);
   return getAdminCourses();
 }
 
-export function updateAdminCourse(
+export async function updateAdminCourse(
   id: number,
   input: Partial<AdminCourseInput>
-): AdminCourse[] {
-  const s = read();
-  const idx = s.added.findIndex((c) => c.id === id);
-  if (idx >= 0) {
-    s.added[idx] = { ...s.added[idx], ...input };
-    if (input.track !== undefined) {
-      s.added[idx].yearCode = codeOf(input.track);
-    }
-  } else {
-    s.overrides[id] = { ...s.overrides[id], ...input };
-  }
-  write(s);
+): Promise<AdminCourse[]> {
+  const supabase = createClient();
+  const { error } = await supabase.from("courses").update(inputToRow(input)).eq("id", id);
+  if (error) throw new Error(error.message);
   return getAdminCourses();
 }
 
-export function deleteAdminCourse(id: number): AdminCourse[] {
-  const s = read();
-  const idx = s.added.findIndex((c) => c.id === id);
-  if (idx >= 0) {
-    s.added.splice(idx, 1);
-    delete s.overrides[id];
-  } else if (!s.deleted.includes(id)) {
-    s.deleted.push(id);
-    delete s.overrides[id];
-  }
-  write(s);
+export async function deleteAdminCourse(id: number): Promise<AdminCourse[]> {
+  const supabase = createClient();
+  const { error } = await supabase.from("courses").delete().eq("id", id);
+  if (error) throw new Error(error.message);
   return getAdminCourses();
 }
 
-export function assignMentor(id: number, mentorId: number): AdminCourse[] {
-  const ids = getAdminCourse(id)?.mentorIds ?? [];
-  if (ids.includes(mentorId)) return getAdminCourses();
-  return updateAdminCourse(id, { mentorIds: [...ids, mentorId] });
+export async function assignMentor(id: number, mentorId: number): Promise<AdminCourse[]> {
+  return updateAdminCourse(id, { mentorIds: [mentorId] });
 }
 
-export function unassignMentor(id: number, mentorId: number): AdminCourse[] {
-  const ids = (getAdminCourse(id)?.mentorIds ?? []).filter((m) => m !== mentorId);
-  return updateAdminCourse(id, { mentorIds: ids });
+export async function unassignMentor(id: number): Promise<AdminCourse[]> {
+  return updateAdminCourse(id, { mentorIds: [] });
 }
