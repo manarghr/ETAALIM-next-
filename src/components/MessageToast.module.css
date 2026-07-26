@@ -1,0 +1,115 @@
+.toast {
+  position: fixed;
+  top: 88px;
+  right: 24px;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(340px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--line, #e6e6ef);
+  box-shadow: 0 18px 44px rgba(18, 18, 28, 0.22);
+  cursor: pointer;
+  animation: toastIn 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.toast:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 22px 52px rgba(18, 18, 28, 0.28);
+}
+
+.icon {
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, #534ab7, #6d63d6);
+  color: #fff;
+  font-size: 17px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.title {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--navy, #1e1b4b);
+}
+
+.text {
+  font-size: 13px;
+  color: var(--muted, #6b7280);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.text b {
+  color: var(--primary, #534ab7);
+  font-weight: 700;
+}
+
+.close {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted, #9ca3af);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.close:hover {
+  background: var(--bg-soft, #f4f4f8);
+  color: var(--navy, #1e1b4b);
+}
+
+/* A slim progress bar that drains over the 8s lifetime. */
+.toast::after {
+  content: "";
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 8px;
+  height: 3px;
+  border-radius: 3px;
+  background: rgba(83, 74, 183, 0.18);
+  transform-origin: left;
+  animation: toastDrain 8s linear forwards;
+}
+
+@keyframes toastIn {
+  from {
+    transform: translateX(120%);
+    opacity: 0;
+  }
+}
+
+@keyframes toastDrain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (max-width: 560px) {
+  .toast {
+    top: auto;
+    bottom: 20px;
+  }
+}

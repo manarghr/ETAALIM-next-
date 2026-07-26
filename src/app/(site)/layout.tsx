@@ -1,5 +1,6 @@
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
+import MessageNotifier from "@/components/MessageNotifier";
 
 export default function SiteLayout({
   children,
@@ -9,6 +10,7 @@ export default function SiteLayout({
       <Header />
       {children}
       <Footer />
+      <MessageNotifier />
     </>
   );
 }

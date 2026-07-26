@@ -1,14 +1,13 @@
-// Mentor inbox: conversations with students, localStorage-backed. Seeded with a
-// few student threads (translated via i18n keys) so the inbox looks alive; the
-// mentor's replies and any new turns are stored as typed. Mock until Supabase.
-import { getRoster } from "@/data/roster";
-import { getCoursesByMentor } from "@/data/courses";
+// Mentor inbox: the conversations students have started with the logged-in
+// mentor, backed by the Supabase `messages` table (keyed by the mentor's real
+// account uuid). Threads are grouped by student and each student's display name
+// is joined from `profiles`. RLS lets a mentor read/insert only their own rows.
+import { createClient } from "@/lib/supabase/client";
 
 export interface InboxMessage {
   id: string;
   from: "student" | "mentor";
-  textKey?: string; // seeded messages translate via i18n
-  text?: string; // typed messages (mentor replies) shown as-is
+  text: string;
   date: string; // ISO
 }
 
@@ -19,92 +18,126 @@ export interface InboxThread {
   messages: InboxMessage[];
 }
 
-const KEY = "etaalim.mentorInbox";
-type Store = Record<number, InboxThread[]>;
-
-const SEED_QUESTION_KEYS = [
-  "mentorDash.inboxSeed1",
-  "mentorDash.inboxSeed2",
-  "mentorDash.inboxSeed3",
-  "mentorDash.inboxSeed4",
-];
-
-function seedFor(mentorId: number): InboxThread[] {
-  // Pull a few students from the mentor's first course roster.
-  const course = getCoursesByMentor(mentorId)[0];
-  const roster = course ? getRoster(course.id).slice(0, 4) : [];
-  return roster.map((s, i) => ({
-    studentId: s.id,
-    studentName: s.name,
-    initials: s.initials,
-    messages: [
-      {
-        id: `seed-${s.id}`,
-        from: "student" as const,
-        textKey: SEED_QUESTION_KEYS[i % SEED_QUESTION_KEYS.length],
-        date: new Date(2026, 6, 10 + i, 9 + i).toISOString(),
-      },
-    ],
-  }));
+function initialsOf(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
-function readAll(): Store {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Store) : {};
-  } catch {
-    return {};
+// All threads for the current mentor, most-recently-active first.
+export async function getInbox(): Promise<InboxThread[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data: rows } = await supabase
+    .from("messages")
+    .select("id, student_id, sender, text, created_at")
+    .eq("mentor_id", user.id)
+    .order("id", { ascending: true });
+
+  if (!rows || rows.length === 0) return [];
+
+  // Group messages by student.
+  const byStudent = new Map<string, InboxMessage[]>();
+  for (const r of rows) {
+    const list = byStudent.get(r.student_id) ?? [];
+    list.push({
+      id: String(r.id),
+      from: r.sender === "mentor" ? "mentor" : "student",
+      text: r.text ?? "",
+      date: r.created_at as string,
+    });
+    byStudent.set(r.student_id, list);
   }
+
+  // Join student display names.
+  const ids = [...byStudent.keys()];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, name")
+    .in("id", ids);
+  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.name as string]));
+
+  const threads: InboxThread[] = ids.map((id) => {
+    const name = nameById.get(id) ?? "Student";
+    return {
+      studentId: id,
+      studentName: name,
+      initials: initialsOf(name),
+      messages: byStudent.get(id) ?? [],
+    };
+  });
+
+  // Most recent activity first.
+  threads.sort((a, b) => {
+    const la = a.messages[a.messages.length - 1]?.date ?? "";
+    const lb = b.messages[b.messages.length - 1]?.date ?? "";
+    return lb.localeCompare(la);
+  });
+  return threads;
 }
 
-function writeAll(s: Store): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(s));
-  } catch {
-    /* ignore */
-  }
-}
-
-function uid(): string {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-export function getInbox(mentorId: number): InboxThread[] {
-  const all = readAll();
-  if (!all[mentorId]) {
-    all[mentorId] = seedFor(mentorId);
-    writeAll(all);
-  }
-  return all[mentorId];
-}
-
-export function replyToThread(
-  mentorId: number,
+// Mentor replies to a student. Returns the refreshed inbox.
+export async function replyToThread(
   studentId: string,
   text: string
-): InboxThread[] {
-  const all = readAll();
-  const list = all[mentorId] ?? seedFor(mentorId);
-  const thread = list.find((t) => t.studentId === studentId);
-  if (thread) {
-    thread.messages.push({
-      id: uid(),
-      from: "mentor",
-      text,
-      date: new Date().toISOString(),
-    });
-  }
-  all[mentorId] = list;
-  writeAll(all);
-  return all[mentorId];
+): Promise<InboxThread[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return getInbox();
+
+  const { error } = await supabase.from("messages").insert({
+    student_id: studentId,
+    mentor_id: user.id,
+    sender: "mentor",
+    text,
+    attachment: null,
+  });
+  if (error) console.error("replyToThread error:", error.message);
+
+  return getInbox();
 }
 
-/** Threads whose last message is from a student (i.e. awaiting a reply). */
-export function unreadCount(mentorId: number): number {
-  return getInbox(mentorId).filter((t) => {
-    const last = t.messages[t.messages.length - 1];
-    return last && last.from === "student";
-  }).length;
+// Live updates: fire `onInsert` whenever a message lands in the mentor's inbox,
+// passing the new row's sender so the caller can notify only on student DMs.
+export function subscribeInbox(
+  onInsert: (sender: "student" | "mentor") => void
+): () => void {
+  const supabase = createClient();
+  let channel: ReturnType<typeof supabase.channel> | null = null;
+  let cancelled = false;
+
+  (async () => {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user || cancelled) return;
+
+    channel = supabase
+      .channel(`inbox-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+          filter: `mentor_id=eq.${user.id}`,
+        },
+        (payload) => {
+          const sender = (payload.new as { sender: string }).sender;
+          onInsert(sender === "mentor" ? "mentor" : "student");
+        }
+      )
+      .subscribe();
+  })();
+
+  return () => {
+    cancelled = true;
+    if (channel) supabase.removeChannel(channel);
+  };
 }

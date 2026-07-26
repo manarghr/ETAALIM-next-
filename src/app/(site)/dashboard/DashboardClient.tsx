@@ -31,8 +31,18 @@ import { getFavoriteIds } from "@/lib/favorites";
 import { getProfile, Profile } from "@/lib/profile";
 import { getApprovals, createApproval, setApprovalStatus, Approval } from "@/lib/approvals";
 import { sessionDateFor, countdownOf, isSoon, DISCOUNTS } from "@/lib/schedule";
-import ChatDock from "@/components/ChatDock";
+import {
+  getStudentInbox,
+  getThread,
+  sendMessage,
+  subscribeStudentInbox,
+  subscribeThread,
+  StudentThread,
+  Message,
+} from "@/lib/messages";
 import styles from "./dashboard.module.css";
+// Reuse the mentor dashboard's inbox styling so both panels look identical.
+import ibx from "../mentor-dashboard/mentor.module.css";
 
 type Mentor = NonNullable<ReturnType<typeof getMentorById>>;
 type Section =
@@ -43,6 +53,7 @@ type Section =
   | "calendar"
   | "wallet"
   | "receipts"
+  | "messages"
   | "notifications";
 
 const NAV: { key: Section; labelKey: string; icon: string }[] = [
@@ -53,6 +64,7 @@ const NAV: { key: Section; labelKey: string; icon: string }[] = [
   { key: "calendar", labelKey: "dash.navSchedule", icon: "fa-calendar" },
   { key: "wallet", labelKey: "dash.navWallet", icon: "fa-money" },
   { key: "receipts", labelKey: "dash.navReceipts", icon: "fa-file-text-o" },
+  { key: "messages", labelKey: "dash.navMessages", icon: "fa-comments" },
   { key: "notifications", labelKey: "dash.navNotifications", icon: "fa-bell" },
 ];
 
@@ -74,10 +86,14 @@ export default function DashboardClient() {
 
   const [buyTarget, setBuyTarget] = useState<Course | null>(null);
   const [topUpAmount, setTopUpAmount] = useState<number | null>(null);
-  // Docked chat: which mentor's conversation is open, and whether it's collapsed.
-  const [chatMentor, setChatMentor] = useState<number | null>(null);
-  const [chatMin, setChatMin] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  // Messages panel: all conversations, the open one, its live messages, and the
+  // slide-in "new message" notification.
+  const [inbox, setInbox] = useState<StudentThread[]>([]);
+  const [activeMentorId, setActiveMentorId] = useState<number | null>(null);
+  const [activeMessages, setActiveMessages] = useState<Message[]>([]);
+  const [replyText, setReplyText] = useState("");
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -143,18 +159,63 @@ export default function DashboardClient() {
     const supabase = createClient();
     supabase.auth.getUser().then(({ data: { user }}) => {
       if (!user) {
-        router.replace("/login"); 
+        router.replace("/login");
       } else {
         setMounted(true); //confirmed -> show the dahsboard
+        // Arriving from a "new message" notification opens the Messages panel.
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("view") === "messages") setSection("messages");
       }
     });
   }, [router]);
+
+  // Load all conversations, and keep them live. A mentor's reply refreshes the
+  // list and pops the "new message" toast (when the panel isn't already open).
+  useEffect(() => {
+    if (!mounted) return;
+    getStudentInbox().then(setInbox);
+    const unsubscribe = subscribeStudentInbox(() => {
+      getStudentInbox().then(setInbox);
+    });
+    return unsubscribe;
+  }, [mounted]);
+
+  // The open conversation: load its messages and keep them live.
+  useEffect(() => {
+    if (activeMentorId === null) return;
+    getThread(activeMentorId).then(setActiveMessages);
+    const unsubscribe = subscribeThread(activeMentorId, () => {
+      getThread(activeMentorId).then(setActiveMessages);
+    });
+    return unsubscribe;
+  }, [activeMentorId]);
 
   const reload = () => setTick((n) => n + 1);
   const showToast = (m: string) => {
     setToast(m);
     setTimeout(() => setToast(null), 3200);
   };
+
+  // Open a conversation with a mentor in the Messages panel.
+  const openChat = (id: number) => {
+    setActiveMentorId(id);
+    setSection("messages");
+  };
+
+  // Send the student's message in the open conversation.
+  const sendReply = async () => {
+    if (activeMentorId === null || !replyText.trim()) return;
+    const updated = await sendMessage(activeMentorId, replyText.trim());
+    setActiveMessages(updated);
+    setReplyText("");
+    getStudentInbox().then(setInbox);
+  };
+
+  // Threads whose newest message is from the mentor (awaiting the student).
+  const msgUnread = inbox.filter((th) => {
+    const last = th.messages[th.messages.length - 1];
+    return last && last.from === "mentor";
+  }).length;
 
   // "in 10 minutes" / "خلال 10 دقائق" — the phrase lives in the dictionary.
   const cd = (date: Date) => {
@@ -365,12 +426,6 @@ export default function DashboardClient() {
     reload();
   };
 
-  // Open (or re-focus) a mentor's docked chat, expanded.
-  const openChat = (id: number) => {
-    setChatMentor(id);
-    setChatMin(false);
-  };
-
   if (!mounted) {
     return (
       <div className={styles.wrap}>
@@ -407,6 +462,8 @@ export default function DashboardClient() {
                     ? enrolledCourses.length
                     : item.key === "saved"
                     ? savedCourses.length
+                    : item.key === "messages"
+                    ? msgUnread
                     : 0;
                 return (
                   <button
@@ -909,6 +966,96 @@ export default function DashboardClient() {
               </section>
             )}
 
+            {/* -------- Messages -------- */}
+            {section === "messages" && (
+              <section>
+                <div className={styles.panelHead}>
+                  <h1>{t("dash.messagesTitle")}</h1>
+                  <p>{t("dash.messagesSub")}</p>
+                </div>
+                {inbox.length === 0 && activeMentorId === null ? (
+                  <div className={styles.empty}>
+                    <i className="fa fa-comments-o"></i>
+                    <p>{t("dash.messagesEmpty")}</p>
+                    <Link href="/mentors" className={styles.primaryBtn}>
+                      {t("dash.findMentors")}
+                    </Link>
+                  </div>
+                ) : (
+                  <div className={ibx.inbox}>
+                    <div className={ibx.threadList}>
+                      {inbox.map((th) => {
+                        const last = th.messages[th.messages.length - 1];
+                        return (
+                          <button
+                            key={th.mentorSeedId}
+                            className={`${ibx.threadItem} ${
+                              activeMentorId === th.mentorSeedId ? ibx.threadActive : ""
+                            }`}
+                            onClick={() => setActiveMentorId(th.mentorSeedId)}
+                          >
+                            <span className={ibx.studentAvatar}>{th.initials}</span>
+                            <div className={ibx.threadInfo}>
+                              <b>{mentorName(th.mentorSeedId) || th.mentorName}</b>
+                              <span>{last?.text ?? ""}</span>
+                            </div>
+                            {last?.from === "mentor" && <span className={ibx.dot} />}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className={ibx.threadView}>
+                      {activeMentorId === null ? (
+                        <div className={ibx.threadEmpty}>
+                          <i className="fa fa-comments-o"></i>
+                          <p>{t("dash.selectConversation")}</p>
+                        </div>
+                      ) : (
+                        <>
+                          <div className={ibx.threadHead}>
+                            <span className={ibx.studentAvatar}>
+                              {(mentorName(activeMentorId) || "?")
+                                .split(" ")
+                                .map((w) => w[0])
+                                .slice(0, 2)
+                                .join("")
+                                .toUpperCase()}
+                            </span>
+                            <b>{mentorName(activeMentorId)}</b>
+                          </div>
+                          <div className={ibx.bubbles}>
+                            {activeMessages.map((msg) => (
+                              <div
+                                key={msg.id}
+                                className={`${ibx.bubble} ${
+                                  msg.from === "student" ? ibx.bubbleMine : ibx.bubbleTheirs
+                                }`}
+                              >
+                                {msg.text}
+                              </div>
+                            ))}
+                          </div>
+                          <div className={ibx.replyBar}>
+                            <input
+                              type="text"
+                              placeholder={t("dash.msgPlaceholder")}
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              onKeyDown={(e) => e.key === "Enter" && sendReply()}
+                            />
+                            <button onClick={sendReply} disabled={!replyText.trim()}>
+                              <i className="fa fa-paper-plane"></i>
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </section>
+            )}
+
             {/* -------- Notifications -------- */}
             {section === "notifications" && (
               <section>
@@ -992,17 +1139,6 @@ export default function DashboardClient() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ===== Docked mentor chat (LinkedIn-style) ===== */}
-      {chatMentor !== null && (
-        <ChatDock
-          key={chatMentor}
-          mentorId={chatMentor}
-          minimized={chatMin}
-          onToggleMinimize={() => setChatMin((m) => !m)}
-          onClose={() => setChatMentor(null)}
-        />
       )}
 
       {/* ===== Toast ===== */}

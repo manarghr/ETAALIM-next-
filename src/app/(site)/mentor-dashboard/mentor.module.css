@@ -36,6 +36,7 @@
   color: #fff;
   font-weight: 700;
   font-size: 15px;
+  box-shadow: 0 4px 10px rgba(83, 74, 183, 0.25);
 }
 
 .studentInfo {
@@ -337,38 +338,55 @@
 /* ===== Messages / inbox ===== */
 .inbox {
   display: grid;
-  grid-template-columns: 300px 1fr;
-  gap: 18px;
-  min-height: 460px;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  min-height: 520px;
 }
 
 .threadList {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  max-height: 640px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .threadItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 12px 14px;
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: 16px;
   background: #fff;
+  box-shadow: 0 1px 3px rgba(18, 18, 28, 0.05);
   cursor: pointer;
   text-align: start;
   font-family: inherit;
-  transition: border-color 0.2s ease, background 0.2s ease;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
 }
 
 .threadItem:hover {
-  border-color: var(--primary, #534ab7);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(83, 74, 183, 0.13);
 }
 
 .threadActive {
-  border-color: var(--primary, #534ab7);
-  background: rgba(83, 74, 183, 0.05);
+  background: linear-gradient(135deg, rgba(83, 74, 183, 0.1), rgba(109, 99, 214, 0.05));
+  border-color: rgba(83, 74, 183, 0.32);
+}
+
+.threadActive::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--primary, #534ab7);
 }
 
 .threadInfo {
@@ -376,10 +394,12 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 2px;
 }
 
 .threadInfo b {
   font-size: 14.5px;
+  font-weight: 700;
   color: var(--navy, #1e1b4b);
 }
 
@@ -392,34 +412,41 @@
 }
 
 .dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
   background: var(--primary, #534ab7);
+  box-shadow: 0 0 0 4px rgba(83, 74, 183, 0.16);
   flex-shrink: 0;
 }
 
 .threadView {
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 16px;
+  border: 1px solid var(--line, #e6e6ef);
+  border-radius: 20px;
   background: #fff;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 14px 36px rgba(18, 18, 28, 0.07);
 }
 
 .threadEmpty {
   margin: auto;
   text-align: center;
   color: var(--muted, #9ca3af);
-  padding: 40px;
+  padding: 48px 32px;
 }
 
 .threadEmpty i {
-  font-size: 40px;
-  display: block;
-  margin-bottom: 12px;
-  opacity: 0.5;
+  display: grid;
+  place-items: center;
+  width: 78px;
+  height: 78px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(83, 74, 183, 0.13), rgba(109, 99, 214, 0.07));
+  color: var(--primary, #534ab7);
+  font-size: 30px;
 }
 
 .threadHead {
@@ -427,36 +454,52 @@
   align-items: center;
   gap: 12px;
   padding: 16px 18px;
-  border-bottom: 1px solid var(--line, #e5e7eb);
+  background: linear-gradient(135deg, #534ab7, #6d63d6);
+  color: #fff;
 }
 
 .threadHead b {
   font-size: 15.5px;
-  color: var(--navy, #1e1b4b);
+  font-weight: 700;
+  color: #fff;
+}
+
+.threadHead .studentAvatar {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
 }
 
 .bubbles {
   flex: 1;
   overflow-y: auto;
-  padding: 18px;
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  background: #f7f7fb;
-  min-height: 240px;
+  gap: 8px;
+  background: radial-gradient(
+        circle at 1px 1px,
+        rgba(83, 74, 183, 0.05) 1px,
+        transparent 0
+      )
+      0 0 / 22px 22px,
+    #f6f6fb;
+  min-height: 300px;
 }
 
 .bubble {
-  max-width: 78%;
+  max-width: 74%;
   padding: 10px 14px;
-  border-radius: 15px;
+  border-radius: 16px;
   font-size: 14px;
-  line-height: 1.45;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(18, 18, 28, 0.06);
+  animation: bubbleIn 0.22s ease;
 }
 
 .bubbleMine {
   align-self: flex-end;
-  background: var(--primary, #534ab7);
+  background: linear-gradient(135deg, #534ab7, #6d63d6);
   color: #fff;
   border-bottom-right-radius: 5px;
 }
@@ -464,46 +507,64 @@
 .bubbleTheirs {
   align-self: flex-start;
   background: #fff;
-  border: 1px solid var(--line, #e5e7eb);
+  border: 1px solid var(--line, #ececf5);
   color: var(--navy, #1e1b4b);
   border-bottom-left-radius: 5px;
+}
+
+@keyframes bubbleIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
 }
 
 .replyBar {
   display: flex;
   gap: 10px;
   padding: 14px 16px;
-  border-top: 1px solid var(--line, #e5e7eb);
+  border-top: 1px solid var(--line, #ececf5);
+  background: #fff;
 }
 
 .replyBar input {
   flex: 1;
-  padding: 11px 15px;
-  border: 1px solid var(--line, #e5e7eb);
-  border-radius: 11px;
+  padding: 12px 16px;
+  border: 1px solid var(--line, #e6e6ef);
+  border-radius: 999px;
   font-family: inherit;
   font-size: 14px;
-  background: #f8fafc;
+  background: #f6f6fb;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .replyBar input:focus {
   outline: none;
   border-color: var(--primary, #534ab7);
   background: #fff;
+  box-shadow: 0 0 0 3px rgba(83, 74, 183, 0.12);
 }
 
 .replyBar button {
-  width: 46px;
+  width: 48px;
+  height: 44px;
   border: none;
-  border-radius: 11px;
-  background: var(--primary, #534ab7);
+  border-radius: 50%;
+  background: linear-gradient(135deg, #534ab7, #6d63d6);
   color: #fff;
   cursor: pointer;
   font-size: 15px;
+  display: grid;
+  place-items: center;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+
+.replyBar button:hover:not(:disabled) {
+  transform: scale(1.06);
 }
 
 .replyBar button:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 

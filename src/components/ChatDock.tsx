@@ -7,6 +7,7 @@ import { getMentorById } from "@/data/mentors";
 import {
   getThread,
   sendMessage,
+  subscribeThread,
   Attachment,
   Message,
   MAX_ATTACHMENT_BYTES,
@@ -45,9 +46,14 @@ export default function ChatDock({
 
   const mentor = getMentorById(mentorId);
 
-  // Load the conversation with this mentor from Supabase.
+  // Load the conversation with this mentor from Supabase, then keep it live so
+  // the mentor's replies appear without a refresh.
   useEffect(() => {
     getThread(mentorId).then(setThread);
+    const unsubscribe = subscribeThread(mentorId, () => {
+      getThread(mentorId).then(setThread);
+    });
+    return unsubscribe;
   }, [mentorId]);
 
   // Scroll to the newest message whenever the thread grows or we expand.
@@ -172,11 +178,7 @@ export default function ChatDock({
                       </span>
                     </a>
                   )}
-                  {(m.text || m.auto) && (
-                    <span className={styles.bubbleText}>
-                      {m.auto ? t("chat.autoReply") : m.text}
-                    </span>
-                  )}
+                  {m.text && <span className={styles.bubbleText}>{m.text}</span>}
                 </div>
               ))
             )}

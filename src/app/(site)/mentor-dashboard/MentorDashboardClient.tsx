@@ -22,7 +22,12 @@ import {
   MentorCourse,
   CourseInput,
 } from "@/lib/mentorCourses";
-import { getInbox, replyToThread, InboxThread } from "@/lib/mentorInbox";
+import {
+  getInbox,
+  replyToThread,
+  subscribeInbox,
+  InboxThread,
+} from "@/lib/mentorInbox";
 import { Certificate } from "@/data/mentors";
 import MentorMedia from "@/components/MentorMedia";
 import shared from "../dashboard/dashboard.module.css";
@@ -81,7 +86,8 @@ export default function MentorDashboardClient() {
   const [form, setForm] = useState<CourseInput>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<MentorCourse | null>(null);
 
-  // Messages
+  // Messages — inbox comes from Supabase (real student threads), kept live.
+  const [inbox, setInbox] = useState<InboxThread[]>([]);
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
 
@@ -122,8 +128,22 @@ export default function MentorDashboardClient() {
     setPCerts(acc.certificates ?? []);
     setPAch(acc.achievements ?? []);
     setMounted(true);
+    // Arriving from a "new message" notification opens the Messages tab.
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("view") === "messages") setSection("messages");
   }, [router]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Load the real student inbox from Supabase and keep it live: refetch whenever
+  // a student sends a new message.
+  useEffect(() => {
+    if (!mounted) return;
+    getInbox().then(setInbox);
+    const unsubscribe = subscribeInbox(() => {
+      getInbox().then(setInbox);
+    });
+    return unsubscribe;
+  }, [mounted]);
 
   const reload = () => setTick((n) => n + 1);
   const showToast = (msg: string) => {
@@ -147,7 +167,6 @@ export default function MentorDashboardClient() {
     .map((c, i) => ({ course: c, date: sessionDateFor(i, base) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const inbox = mounted ? getInbox(mentorId) : [];
   const unread = inbox.filter((tr2) => {
     const last = tr2.messages[tr2.messages.length - 1];
     return last && last.from === "student";
@@ -212,12 +231,12 @@ export default function MentorDashboardClient() {
   };
 
   const thread = inbox.find((th) => th.studentId === activeThread) ?? null;
-  const sendReply = () => {
+  const sendReply = async () => {
     if (!thread || !replyText.trim()) return;
-    replyToThread(mentorId, thread.studentId, replyText.trim());
+    const updated = await replyToThread(thread.studentId, replyText.trim());
+    setInbox(updated);
     setReplyText("");
     showToast(t("mentorDash.toastReplySent"));
-    reload();
   };
 
   // Skill tag helpers
@@ -266,8 +285,7 @@ export default function MentorDashboardClient() {
     reload();
   };
 
-  const inboxText = (msg: InboxThread["messages"][number]) =>
-    msg.textKey ? t(msg.textKey) : msg.text ?? "";
+  const inboxText = (msg: InboxThread["messages"][number]) => msg.text ?? "";
 
   if (!mounted) {
     return (
