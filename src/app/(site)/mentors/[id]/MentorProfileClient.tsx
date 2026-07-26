@@ -13,11 +13,24 @@ import {
   mentorDisplayTitle,
 } from "@/data/localized";
 import MentorMedia from "@/components/MentorMedia";
+import { getPublicMentorProfile, MentorOverrides } from "@/lib/mentorProfile";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./page.module.css";
 
-export default function MentorProfileClient({ mentor }: { mentor: Mentor }) {
+export default function MentorProfileClient({
+  mentor: seedMentor,
+}: {
+  mentor: Mentor;
+}) {
   const { t, locale } = useI18n();
+
+  // Overlay the mentor's REAL saved profile (from Supabase) on top of the seed
+  // data, so their edits are what visitors see.
+  const [overrides, setOverrides] = useState<MentorOverrides | null>(null);
+  useEffect(() => {
+    getPublicMentorProfile(seedMentor.id).then(setOverrides);
+  }, [seedMentor.id]);
+  const mentor: Mentor = overrides ? { ...seedMentor, ...overrides } : seedMentor;
 
   const mentorCourses = getCoursesByMentor(mentor.id);
   const skills = trSkills(mentor.skills, locale);

@@ -30,6 +30,7 @@ import {
 } from "@/lib/mentorInbox";
 import { Certificate } from "@/data/mentors";
 import MentorMedia from "@/components/MentorMedia";
+import { getMyMentorProfile, saveMyMentorProfile } from "@/lib/mentorProfile";
 import shared from "../dashboard/dashboard.module.css";
 import m from "./mentor.module.css";
 // Reuse the real student-facing profile styles so the preview is pixel-identical.
@@ -131,6 +132,24 @@ export default function MentorDashboardClient() {
     // Arriving from a "new message" notification opens the Messages tab.
     const params = new URLSearchParams(window.location.search);
     if (params.get("view") === "messages") setSection("messages");
+
+    // Override the localStorage seed with the mentor's REAL saved profile from
+    // Supabase (only the fields they've actually set, so a seed mentor keeps
+    // their rich demo data until they save their own).
+    getMyMentorProfile().then((prof) => {
+      if (!prof) return;
+      if (prof.title) setPTitle(prof.title);
+      if (prof.bio) setPBio(prof.bio);
+      if (prof.major) setPMajor(prof.major);
+      if (prof.level) setPLevel(prof.level);
+      if (prof.experience) setPExp(String(prof.experience));
+      if (prof.phone) setPPhone(prof.phone);
+      if (prof.hourlyRate) setPRate(String(prof.hourlyRate));
+      if (prof.availability) setPAvail(prof.availability);
+      if (prof.skills.length) setPSkills(prof.skills);
+      if (prof.certificates.length) setPCerts(prof.certificates);
+      if (prof.achievements.length) setPAch(prof.achievements);
+    });
   }, [router]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
@@ -265,20 +284,39 @@ export default function MentorDashboardClient() {
   const removeAchievement = (i: number) =>
     setPAch((a) => a.filter((_, idx) => idx !== i));
 
-  const saveProfile = (e: FormEvent) => {
+  const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
+    const certificates = pCerts.filter((c) => c.name.trim() || c.issuer.trim());
+    const experience = parseInt(pExp, 10) || 0;
+    const hourlyRate = parseInt(pRate, 10) || 0;
+
+    // Persist to Supabase (the real, cross-session source of truth)…
+    await saveMyMentorProfile({
+      title: pTitle.trim(),
+      bio: pBio,
+      major: pMajor.trim(),
+      level: pLevel.trim(),
+      experience,
+      phone: pPhone.trim(),
+      skills: pSkills,
+      certificates,
+      achievements: pAch,
+      hourlyRate,
+      availability: pAvail,
+    });
+    // …and keep the localStorage account in sync so the sidebar/preview stay
+    // consistent for the rest of this session.
     updateMentorProfile({
       title: pTitle.trim(),
       bioOverride: pBio,
       major: pMajor.trim(),
       level: pLevel.trim(),
-      experience: parseInt(pExp, 10) || 0,
+      experience,
       phone: pPhone.trim(),
       skills: pSkills.join(", "),
-      // drop empty certification rows
-      certificates: pCerts.filter((c) => c.name.trim() || c.issuer.trim()),
+      certificates,
       achievements: pAch,
-      hourlyRate: parseInt(pRate, 10) || 0,
+      hourlyRate,
       availability: pAvail,
     });
     showToast(t("mentorDash.toastProfileSaved"));
