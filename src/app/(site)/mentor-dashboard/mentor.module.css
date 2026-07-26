@@ -880,6 +880,87 @@
   background: #c42d3c;
 }
 
+/* Profile actions: Preview + Save side by side */
+.profileActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.previewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 22px;
+  border: 1px solid var(--primary, #534ab7);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--primary, #534ab7);
+  font-family: inherit;
+  font-size: 14.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.previewBtn:hover {
+  background: rgba(83, 74, 183, 0.08);
+}
+
+/* ===== "View as a student" full-screen preview overlay ===== */
+.previewOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: var(--bg, #f7f7fb);
+  display: flex;
+  flex-direction: column;
+  animation: rise 0.22s ease;
+}
+
+.previewBar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 22px;
+  background: var(--primary, #534ab7);
+  color: #fff;
+}
+
+.previewBar span {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.previewBar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.previewBar button:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.previewScroll {
+  flex: 1;
+  overflow-y: auto;
+}
+
 @media (max-width: 900px) {
   .inbox {
     grid-template-columns: 1fr;

@@ -24,8 +24,11 @@ import {
 } from "@/lib/mentorCourses";
 import { getInbox, replyToThread, InboxThread } from "@/lib/mentorInbox";
 import { Certificate } from "@/data/mentors";
+import MentorMedia from "@/components/MentorMedia";
 import shared from "../dashboard/dashboard.module.css";
 import m from "./mentor.module.css";
+// Reuse the real student-facing profile styles so the preview is pixel-identical.
+import pv from "../mentors/[id]/page.module.css";
 
 type Section =
   | "overview"
@@ -68,6 +71,10 @@ export default function MentorDashboardClient() {
   const [section, setSection] = useState<Section>("overview");
   const [base] = useState(() => Date.now());
   const [toast, setToast] = useState<string | null>(null);
+
+  // "View as a student" — preview the public profile from the current (unsaved)
+  // form values before committing them.
+  const [showPreview, setShowPreview] = useState(false);
 
   // Course editor: null = closed, "new" or a course object = open
   const [editing, setEditing] = useState<MentorCourse | "new" | null>(null);
@@ -846,9 +853,18 @@ export default function MentorDashboardClient() {
                       </label>
                     </div>
 
-                    <button type="submit" className={m.saveBtn}>
-                      {t("mentorDash.saveProfile")}
-                    </button>
+                    <div className={m.profileActions}>
+                      <button
+                        type="button"
+                        className={m.previewBtn}
+                        onClick={() => setShowPreview(true)}
+                      >
+                        <i className="fa fa-eye"></i> {t("mentorDash.previewProfile")}
+                      </button>
+                      <button type="submit" className={m.saveBtn}>
+                        {t("mentorDash.saveProfile")}
+                      </button>
+                    </div>
                   </form>
                 </div>
               </section>
@@ -856,6 +872,217 @@ export default function MentorDashboardClient() {
           </main>
         </div>
       </div>
+
+      {/* ===== "View as a student" profile preview =====
+          A full-screen overlay that renders the exact student-facing profile
+          layout (reusing its CSS module `pv`), fed by the LIVE unsaved form
+          state so edits show before saving. */}
+      {showPreview && (() => {
+        const previewYears = (account.teaching ?? []).flatMap((te) => te.years);
+        return (
+          <div className={m.previewOverlay}>
+            <div className={m.previewBar}>
+              <span>
+                <i className="fa fa-eye"></i> {t("mentorDash.previewNote")}
+              </span>
+              <button type="button" onClick={() => setShowPreview(false)}>
+                <i className="fa fa-times"></i> {t("mentorDash.exitPreview")}
+              </button>
+            </div>
+
+            <div className={m.previewScroll}>
+              {/* Profile header — mirrors /mentors/[id] */}
+              <section className={pv.profileHeader}>
+                <div className="container">
+                  <div className={pv.headerInner}>
+                    <div className={pv.headerAvatar}>
+                      <img src={account.profilePicture} alt={account.name} />
+                    </div>
+                    <div className={pv.headerText}>
+                      <h1>{account.name}</h1>
+                      <p className={pv.headerTitle}>{pTitle || account.title}</p>
+                      <div className={pv.headerRating}>
+                        <span className={pv.stars}>
+                          <i className="fa fa-star"></i>
+                          <i className="fa fa-star"></i>
+                          <i className="fa fa-star"></i>
+                          <i className="fa fa-star"></i>
+                          <i className="fa fa-star-half-o"></i>
+                        </span>
+                        4.5 · 128 {t("mentorDetail.reviews")} ·{" "}
+                        {pExp || account.experience} {t("mentorDetail.yearsExperience")}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <div className={pv.wrap}>
+                <div className="container">
+                  <div className={pv.layout}>
+                    {/* Sidebar */}
+                    <aside className={pv.sidebar}>
+                      <div className={pv.card}>
+                        <h3>{t("mentorDetail.contact")}</h3>
+                        <div className={pv.contactList}>
+                          <p>
+                            <i className="fa fa-envelope"></i> {account.email}
+                          </p>
+                          <p>
+                            <i className="fa fa-phone"></i> {pPhone || account.phone}
+                          </p>
+                          <p>
+                            <i className="fa fa-map-marker"></i> {t("mentorDetail.location")}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className={pv.card}>
+                        <h3>{t("mentorDetail.details")}</h3>
+                        <div className={pv.infoRow}>
+                          <span>{t("mentorDetail.major")}</span>
+                          <span>{tr(pMajor, locale)}</span>
+                        </div>
+                        <div className={pv.infoRow}>
+                          <span>{t("mentorDetail.level")}</span>
+                          <span>{tr(pLevel, locale)}</span>
+                        </div>
+                        <div className={pv.infoRow}>
+                          <span>{t("mentorDetail.experience")}</span>
+                          <span>{pExp} {t("mentorDetail.years")}</span>
+                        </div>
+                        {previewYears.length > 0 && (
+                          <div className={pv.infoRow}>
+                            <span>{t("mentorDetail.teaches")}</span>
+                            <span>{previewYears.join(", ")}</span>
+                          </div>
+                        )}
+                        <div className={pv.infoRow}>
+                          <span>{t("mentorDetail.coursesWord")}</span>
+                          <span>{courses.length}</span>
+                        </div>
+                      </div>
+
+                      <div className={pv.card}>
+                        <h3>{t("mentorDetail.skills")}</h3>
+                        <div className={pv.skillTags}>
+                          {pSkills.map((sk) => (
+                            <span key={sk} className={pv.skillTag}>
+                              {tr(sk, locale)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    </aside>
+
+                    {/* Main */}
+                    <main className={pv.main}>
+                      <div className={pv.panel}>
+                        <h2 className={pv.sectionTitle}>{t("mentorDetail.aboutMe")}</h2>
+                        <p className={pv.aboutText}>{pBio}</p>
+                      </div>
+
+                      {/* Intro / recorded-lessons player — example media (kept as-is,
+                          real uploads land with the backend). */}
+                      {account.previewVideo && (
+                        <div className={pv.panel}>
+                          <h2 className={pv.sectionTitle}>
+                            {t("mentorDetail.previewTitle")}
+                          </h2>
+                          <MentorMedia
+                            poster={account.previewPoster}
+                            video={account.previewVideo}
+                            lessons={account.lessons.map((l) => ({
+                              ...l,
+                              title: tr(l.title, locale),
+                            }))}
+                          />
+                        </div>
+                      )}
+
+                      <div className={pv.panel}>
+                        <h2 className={pv.sectionTitle}>
+                          {t("mentorDetail.certifications")}
+                        </h2>
+                        <div className={pv.certGrid}>
+                          {pCerts.map((c, i) => (
+                            <div className={pv.certCard} key={i}>
+                              <div className={pv.certIcon}>
+                                <i className="fa fa-graduation-cap"></i>
+                              </div>
+                              <div>
+                                <div className={pv.certName}>{c.name}</div>
+                                <div className={pv.certIssuer}>
+                                  {c.issuer} ·{" "}
+                                  <span className={pv.certYear}>{c.year}</span>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className={pv.panel}>
+                        <h2 className={pv.sectionTitle}>
+                          {t("mentorDetail.achievements")}
+                        </h2>
+                        <div className={pv.achList}>
+                          {pAch.map((a, i) => (
+                            <div className={pv.achItem} key={i}>
+                              <i className="fa fa-trophy"></i>
+                              {tr(a, locale)}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* My Courses — the mentor's real saved courses */}
+                      <div className={pv.panel}>
+                        <h2 className={pv.sectionTitle}>{t("mentorDetail.myCourses")}</h2>
+                        {courses.length > 0 ? (
+                          <div className={pv.tableWrap}>
+                            <table className={pv.coursesTable}>
+                              <thead>
+                                <tr>
+                                  <th>{t("mentorDetail.thSubject")}</th>
+                                  <th>{t("mentorDetail.thLevel")}</th>
+                                  <th>{t("mentorDetail.thDate")}</th>
+                                  <th>{t("mentorDetail.thPrice")}</th>
+                                  <th>{t("mentorDetail.thAction")}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {courses.map((course) => (
+                                  <tr key={course.id}>
+                                    <td>{tr(course.subject, locale)}</td>
+                                    <td>{tr(course.level, locale)}</td>
+                                    <td>{formatDate(course.date, locale)}</td>
+                                    <td className={pv.price}>
+                                      {formatDZD(course.price, locale)}
+                                    </td>
+                                    <td>
+                                      <span className={pv.tableBtn}>
+                                        {t("mentorDetail.view")}{" "}
+                                        <i className="fa fa-arrow-right"></i>
+                                      </span>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : (
+                          <p className={pv.aboutText}>{t("mentorDetail.noCourses")}</p>
+                        )}
+                      </div>
+                    </main>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* ===== Course editor modal ===== */}
       {editing && (
