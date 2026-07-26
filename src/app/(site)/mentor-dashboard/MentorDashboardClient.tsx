@@ -87,6 +87,9 @@ export default function MentorDashboardClient() {
   const [form, setForm] = useState<CourseInput>(EMPTY_FORM);
   const [deleteTarget, setDeleteTarget] = useState<MentorCourse | null>(null);
 
+  // The mentor's courses, loaded from Supabase (their owned catalog rows).
+  const [courses, setCourses] = useState<MentorCourse[]>([]);
+
   // Messages — inbox comes from Supabase (real student threads), kept live.
   const [inbox, setInbox] = useState<InboxThread[]>([]);
   const [activeThread, setActiveThread] = useState<string | null>(null);
@@ -153,6 +156,12 @@ export default function MentorDashboardClient() {
   }, [router]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
+  // Load the mentor's courses from Supabase.
+  useEffect(() => {
+    if (!mounted) return;
+    getMentorCourses().then(setCourses);
+  }, [mounted]);
+
   // Load the real student inbox from Supabase and keep it live: refetch whenever
   // a student sends a new message.
   useEffect(() => {
@@ -175,7 +184,6 @@ export default function MentorDashboardClient() {
   void tick;
   const account = getMentorAccount();
   const mentorId = account.id;
-  const courses = mounted ? getMentorCourses(mentorId) : [];
   const rating = (4.6 + (mentorId % 4) * 0.1).toFixed(1);
 
   const roster = courses.flatMap((c) =>
@@ -228,25 +236,23 @@ export default function MentorDashboardClient() {
     });
     setEditing(c);
   };
-  const saveCourse = (e: FormEvent) => {
+  const saveCourse = async (e: FormEvent) => {
     e.preventDefault();
     if (!form.subject.trim()) return;
     if (editing === "new") {
-      addCourse(mentorId, form);
+      setCourses(await addCourse(mentorId, form));
       showToast(t("mentorDash.toastCourseCreated"));
     } else if (editing) {
-      updateCourse(mentorId, editing.id, form);
+      setCourses(await updateCourse(editing.id, form));
       showToast(t("mentorDash.toastCourseUpdated"));
     }
     setEditing(null);
-    reload();
   };
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteTarget) return;
-    deleteCourse(mentorId, deleteTarget.id);
+    setCourses(await deleteCourse(deleteTarget.id));
     setDeleteTarget(null);
     showToast(t("mentorDash.toastCourseDeleted"));
-    reload();
   };
 
   const thread = inbox.find((th) => th.studentId === activeThread) ?? null;

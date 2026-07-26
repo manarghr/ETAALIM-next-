@@ -1,17 +1,16 @@
-// The mentor's own course list, editable (create/edit/delete), localStorage-
-// backed. Seeds from the mentor's real catalog courses on first load; new
-// courses the mentor creates carry a free-text subject. Fields mirror the
-// platform's Course model so the editor matches how courses appear site-wide.
-// Mock until the backend.
-import { getCoursesByMentor } from "@/data/courses";
-import { getRoster } from "@/data/roster";
+// The mentor's own course list, backed by the Supabase `courses` table. A course
+// carries `mentor_id` (the numeric seed id, for attribution across the catalog)
+// and `owner_id` (the mentor's real uuid, which RLS uses so a mentor can only
+// edit/delete their own). Courses created here are real catalog rows students
+// can find and buy. Fields mirror the platform's Course model.
+import { createClient } from "@/lib/supabase/client";
 
 export interface CourseInput {
   subject: string;
   description: string;
   major: string;
   tier: string;
-  level: string;
+  level: string; // shown in the editor; not stored (mirrors the admin editor)
   date: string; // yyyy-mm-dd (start date)
   time: string; // HH:MM (24h)
   price: number; // self-paced / recorded (DZD)
@@ -27,85 +26,89 @@ export interface MentorCourse extends CourseInput {
   custom?: boolean;
 }
 
-const KEY = "etaalim.mentorCourses";
-type Store = Record<number, MentorCourse[]>;
-
-function seedFor(mentorId: number): MentorCourse[] {
-  return getCoursesByMentor(mentorId).map((c) => ({
-    id: c.id,
-    subject: c.subject,
-    description: "",
-    major: c.major,
-    tier: c.tier,
-    level: c.level,
-    date: c.date,
-    time: c.time,
-    price: c.price,
-    priceGroup: c.priceGroup,
-    priceIndividual: c.priceIndividual,
-    status: c.status,
-    students: getRoster(c.id).length,
-  }));
-}
-
-function readAll(): Store {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Store) : {};
-  } catch {
-    return {};
-  }
-}
-
-function writeAll(s: Store): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(s));
-  } catch {
-    /* ignore */
-  }
-}
-
-export function getMentorCourses(mentorId: number): MentorCourse[] {
-  const all = readAll();
-  if (!all[mentorId]) {
-    all[mentorId] = seedFor(mentorId);
-    writeAll(all);
-  }
-  return all[mentorId];
-}
-
-export function addCourse(mentorId: number, input: CourseInput): MentorCourse[] {
-  const all = readAll();
-  const list = all[mentorId] ?? seedFor(mentorId);
-  list.unshift({
-    id: 1_000_000 + Math.floor(Math.random() * 1_000_000),
-    ...input,
-    students: 0,
+// DB row -> the shape the editor/dashboard expect.
+function rowToCourse(r: Record<string, unknown>): MentorCourse {
+  return {
+    id: r.id as number,
+    subject: (r.subject as string) ?? "",
+    description: (r.description as string) ?? "",
+    major: (r.major as string) ?? "",
+    tier: (r.tier as string) ?? "",
+    level: (r.level as string) ?? "",
+    date: (r.session_date as string) ?? "",
+    time: (r.session_time as string) ?? "",
+    price: (r.price as number) ?? 0,
+    priceGroup: (r.price_group as number) ?? 0,
+    priceIndividual: (r.price_individual as number) ?? 0,
+    status: (r.status as string) === "upcoming" ? "upcoming" : "available",
+    students: 0, // real student counts land with the roster step
     custom: true,
-  });
-  all[mentorId] = list;
-  writeAll(all);
-  return list;
+  };
 }
 
-export function updateCourse(
-  mentorId: number,
+// Editor input -> DB columns (only provided fields are written).
+function inputToRow(input: Partial<CourseInput>): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+  if (input.subject !== undefined) row.subject = input.subject;
+  if (input.description !== undefined) row.description = input.description || null;
+  if (input.major !== undefined) row.major = input.major;
+  if (input.tier !== undefined) row.tier = input.tier;
+  if (input.date !== undefined) row.session_date = input.date || null;
+  if (input.time !== undefined) row.session_time = input.time || null;
+  if (input.price !== undefined) row.price = input.price;
+  if (input.priceGroup !== undefined) row.price_group = input.priceGroup;
+  if (input.priceIndividual !== undefined) row.price_individual = input.priceIndividual;
+  if (input.status !== undefined) row.status = input.status;
+  return row;
+}
+
+// The courses the current mentor owns, newest first.
+export async function getMentorCourses(): Promise<MentorCourse[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { data } = await supabase
+    .from("courses")
+    .select("*")
+    .eq("owner_id", user.id)
+    .order("id", { ascending: false });
+  return (data ?? []).map(rowToCourse);
+}
+
+// Create a course owned by the current mentor, attributed to their seed id.
+export async function addCourse(
+  seedMentorId: number,
+  input: CourseInput
+): Promise<MentorCourse[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const { error } = await supabase
+    .from("courses")
+    .insert({ ...inputToRow(input), owner_id: user.id, mentor_id: seedMentorId });
+  if (error) console.error("addCourse:", error.message);
+  return getMentorCourses();
+}
+
+export async function updateCourse(
   id: number,
   input: Partial<CourseInput>
-): MentorCourse[] {
-  const all = readAll();
-  const list = all[mentorId] ?? seedFor(mentorId);
-  all[mentorId] = list.map((c) => (c.id === id ? { ...c, ...input } : c));
-  writeAll(all);
-  return all[mentorId];
+): Promise<MentorCourse[]> {
+  const supabase = createClient();
+  const { error } = await supabase.from("courses").update(inputToRow(input)).eq("id", id);
+  if (error) console.error("updateCourse:", error.message);
+  return getMentorCourses();
 }
 
-export function deleteCourse(mentorId: number, id: number): MentorCourse[] {
-  const all = readAll();
-  const list = all[mentorId] ?? seedFor(mentorId);
-  all[mentorId] = list.filter((c) => c.id !== id);
-  writeAll(all);
-  return all[mentorId];
+export async function deleteCourse(id: number): Promise<MentorCourse[]> {
+  const supabase = createClient();
+  const { error } = await supabase.from("courses").delete().eq("id", id);
+  if (error) console.error("deleteCourse:", error.message);
+  return getMentorCourses();
 }

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Mentor, mentorYearCodes, TeachTier } from "@/data/mentors";
 import { isFollowing, toggleFollow } from "@/lib/follows";
-import { getCoursesByMentor, formatDate, formatDZD } from "@/data/courses";
+import { formatDate, formatDZD } from "@/data/courses";
 import {
   tr,
   trList,
@@ -14,6 +14,7 @@ import {
 } from "@/data/localized";
 import MentorMedia from "@/components/MentorMedia";
 import { getPublicMentorProfile, MentorOverrides } from "@/lib/mentorProfile";
+import { effectiveCourses, EffectiveCourse } from "@/lib/catalog";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./page.module.css";
 
@@ -32,7 +33,15 @@ export default function MentorProfileClient({
   }, [seedMentor.id]);
   const mentor: Mentor = overrides ? { ...seedMentor, ...overrides } : seedMentor;
 
-  const mentorCourses = getCoursesByMentor(mentor.id);
+  // The mentor's real courses from the DB (created + backfilled), attributed by
+  // the numeric mentor id.
+  const [mentorCourses, setMentorCourses] = useState<EffectiveCourse[]>([]);
+  useEffect(() => {
+    effectiveCourses().then((all) =>
+      setMentorCourses(all.filter((c) => c.mentorId === seedMentor.id))
+    );
+  }, [seedMentor.id]);
+
   const skills = trSkills(mentor.skills, locale);
 
   // Localize the recorded-lesson titles before handing them to the player.
