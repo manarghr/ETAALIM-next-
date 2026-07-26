@@ -14,15 +14,14 @@ export interface LessonVideo {
 export type TeachTier = "Primary" | "Middle" | "High School" | "University";
 
 /**
- * A teaching qualification. Each mentor belongs to ONE education cycle and is
- * qualified up to a HIGHEST year in it; that implies teaching every year below
- * it in the same cycle (a 5AP primary teacher can also teach 1AP–4AP; a 4AM
- * teacher covers 1AM–3AM), but never a different cycle.
+ * A teaching qualification: one education cycle + the EXACT years the mentor
+ * chose to teach in it (no forced coverage of younger years — a 3AS teacher
+ * isn't assumed to teach 1AS unless they picked it).
  */
 export interface Teaching {
   tier: TeachTier;
-  /** highest Algerian year code (5AP, 4AM, 3AS, Master…) */
-  top: string;
+  /** the specific Algerian year codes they teach (e.g. ["1AS","3AS"]) */
+  years: string[];
 }
 
 /** Year codes per cycle, youngest → oldest (same codes the course catalog uses). */
@@ -138,7 +137,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[1],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Mathematics", 0),
-    teaching: [{ tier: "High School", top: "3AS" }],
+    teaching: [{ tier: "High School", years: ["1AS", "2AS", "3AS"] }],
   },
   {
     id: 2,
@@ -163,7 +162,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[2],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Physics", 1),
-    teaching: [{ tier: "Middle", top: "4AM" }],
+    teaching: [{ tier: "Middle", years: ["1AM", "2AM", "3AM", "4AM"] }],
   },
   {
     id: 3,
@@ -188,7 +187,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[2],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Computer Science", 2),
-    teaching: [{ tier: "University", top: "Doctorat" }],
+    teaching: [{ tier: "University", years: ["Licence", "Master", "Doctorat"] }],
   },
   {
     id: 4,
@@ -213,7 +212,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[0],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Chemistry", 3),
-    teaching: [{ tier: "High School", top: "3AS" }],
+    teaching: [{ tier: "High School", years: ["1AS", "2AS", "3AS"] }],
   },
   {
     id: 5,
@@ -239,7 +238,7 @@ export const mentors: Mentor[] = [
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Biology", 4),
     // qualified up to 3AM only — teaches 1AM–3AM but not the 4AM (BEM) year
-    teaching: [{ tier: "Middle", top: "3AM" }],
+    teaching: [{ tier: "Middle", years: ["1AM", "2AM", "3AM"] }],
   },
   {
     id: 6,
@@ -264,7 +263,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[3],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("English", 5),
-    teaching: [{ tier: "High School", top: "3AS" }],
+    teaching: [{ tier: "High School", years: ["1AS", "2AS", "3AS"] }],
   },
   {
     id: 7,
@@ -290,7 +289,7 @@ export const mentors: Mentor[] = [
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("French", 2),
     // primary teacher of 5AP — also covers the younger years (1AP–4AP)
-    teaching: [{ tier: "Primary", top: "5AP" }],
+    teaching: [{ tier: "Primary", years: ["1AP", "2AP", "3AP", "4AP", "5AP"] }],
   },
   {
     id: 8,
@@ -315,7 +314,7 @@ export const mentors: Mentor[] = [
     previewPoster: eduImgs[2],
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("Economics", 3),
-    teaching: [{ tier: "University", top: "Master" }],
+    teaching: [{ tier: "University", years: ["Licence", "Master"] }],
   },
   {
     id: 9,
@@ -341,7 +340,7 @@ export const mentors: Mentor[] = [
     previewVideo: PREVIEW_VIDEO,
     lessons: makeLessons("History", 5),
     // primary teacher qualified for 5AP — also covers 1AP–4AP
-    teaching: [{ tier: "Primary", top: "5AP" }],
+    teaching: [{ tier: "Primary", years: ["1AP", "2AP", "3AP", "4AP", "5AP"] }],
   },
 ];
 
@@ -349,13 +348,12 @@ export function getMentors(): Mentor[] {
   return mentors;
 }
 
-/** Every year code the mentor covers in a cycle: their top year and all below. */
+/** The exact year codes the mentor teaches in a cycle (sorted youngest→oldest). */
 export function mentorYearCodes(m: Mentor, tier: TeachTier): string[] {
   const q = m.teaching.find((te) => te.tier === tier);
   if (!q) return [];
   const order = TEACH_YEARS[tier];
-  const idx = order.indexOf(q.top);
-  return idx < 0 ? [] : order.slice(0, idx + 1);
+  return [...q.years].sort((a, b) => order.indexOf(a) - order.indexOf(b));
 }
 
 export function mentorTeachesTier(m: Mentor, tier: TeachTier): boolean {

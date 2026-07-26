@@ -125,11 +125,10 @@ export default function MentorProfileClient({ mentor }: { mentor: Mentor }) {
                   <span>{t("mentorDetail.experience")}</span>
                   <span>{mentor.experience} {t("mentorDetail.years")}</span>
                 </div>
-                {/* years covered, e.g. "1AM–4AM" (top year and everything below) */}
+                {/* the exact years the mentor picked, e.g. "1AS, 2AS, 3AS" */}
                 {mentor.teaching.map((te) => {
                   const codes = mentorYearCodes(mentor, te.tier as TeachTier);
-                  const range =
-                    codes.length > 1 ? `${codes[0]}–${codes[codes.length - 1]}` : codes[0] ?? "";
+                  const range = codes.join(", ");
                   return (
                     <div className={styles.infoRow} key={te.tier}>
                       <span>{t("mentorDetail.teaches")}</span>

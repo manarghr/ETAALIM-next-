@@ -278,7 +278,7 @@ export default function AdminClient() {
   const teachRange = (mt: (typeof mentors)[number], tier: TeachTier) => {
     const codes = mentorYearCodes(mt, tier);
     if (codes.length === 0) return "";
-    return codes.length > 1 ? `${codes[0]}–${codes[codes.length - 1]}` : codes[0];
+    return codes.join(", ");
   };
 
   const courseTitle = (c: AdminCourse) => (c.custom ? c.subject : tr(c.subject, locale));

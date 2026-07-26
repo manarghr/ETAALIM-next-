@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
 import { registerMentor } from "@/lib/mentor";
+import { createClient } from "@/lib/supabase/client";
 import { TEACH_YEARS, TeachTier } from "@/data/mentors";
 
 // One education cycle per mentor (they never span cycles); labels reuse the
@@ -32,7 +33,11 @@ export default function MentorForm() {
   const [skillInput, setSkillInput] = useState("");
   // teaching qualification — cycle + highest year in it
   const [teachTier, setTeachTier] = useState<TeachTier | "">("");
-  const [teachTop, setTeachTop] = useState("");
+  const [teachYears, setTeachYears] = useState<string[]>([]);
+  const toggleYear = (code: string) =>
+    setTeachYears((ys) =>
+      ys.includes(code) ? ys.filter((y) => y !== code) : [...ys, code]
+    );
 
   const toggle = (id: string) => setShow((v) => ({ ...v, [id]: !v[id] }));
   const groupClass = (field: string) =>
@@ -59,7 +64,7 @@ export default function MentorForm() {
     }
   };
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const form = e.currentTarget;
     const data = new FormData(form);
@@ -72,7 +77,7 @@ export default function MentorForm() {
       next.confirmPassword = true;
     }
     if (!teachTier) next.teachTier = true;
-    if (teachTier && !teachTop) next.teachTop = true;
+    if (teachTier && teachYears.length === 0) next.teachTop = true;
     if (!data.get("terms")) next.terms = true;
 
     setErrors(next);
@@ -83,16 +88,50 @@ export default function MentorForm() {
     // drop them into their dashboard. Real verification lands with the backend.
     const name = String(data.get("name") ?? "").trim();
     const email = String(data.get("email") ?? "").trim();
+    const phone = String(data.get("phone") ?? "").trim();
+    const expertise = String(data.get("expertise") ?? "").trim();
+    const level = String(data.get("level") ?? "").trim();
+    const password = String(data.get("password") ?? "");
+
+    // ===== Real Supabase mentor account =====
+    const supabase = createClient();
+    const { data: auth, error } = await supabase.auth.signUp({ email, password });
+    if (error || !auth.user) {
+      alert(error?.message ?? "Sign-up failed");
+      return;
+    }
+    // profile row with the mentor role
+    await supabase.from("profiles").insert({
+      id: auth.user.id,
+      name,
+      email,
+      phone,
+      role: "mentor",
+    });
+    // mentor-specific details
+    await supabase.from("mentors").insert({
+      id: auth.user.id,
+      major: expertise,
+      level,
+      experience,
+      skills: skills.join(", "),
+      title: level ? `${level} · ${expertise}` : expertise,
+      teaching_tier: teachTier || null,
+      teaching_years: teachYears.length ? teachYears : null,
+      profile_picture: photo || "/images/mentor-default.jpg",
+    });
+
+    // TEMP: keep the localStorage mentor account so the mentor dashboard still works.
     const account = registerMentor({
       name,
       email,
-      phone: String(data.get("phone") ?? "").trim(),
-      expertise: String(data.get("expertise") ?? "").trim(),
-      level: String(data.get("level") ?? "").trim(),
+      phone,
+      expertise,
+      level,
       experience,
       skills,
       photo,
-      teaching: teachTier ? [{ tier: teachTier, top: teachTop }] : [],
+      teaching: teachTier ? [{ tier: teachTier, years: teachYears }] : [],
     });
     login({ name: account.name, email: account.email, role: "mentor" });
     router.push("/mentor-dashboard");
@@ -183,14 +222,14 @@ export default function MentorForm() {
                   <div className={s.errorMessage}>{t("auth.errEmail")}</div>
                 </div>
                 <div className={groupClass("phone")}>
-                  <label htmlFor="mentor-phone">{t("auth.phone")}</label>
+                  <label htmlFor="mentor-phone">{t("mentorForm.phone")}</label>
                   <div className={s.inputWithIcon}>
                     <i className="fa fa-phone"></i>
                     <input
                       id="mentor-phone"
                       name="phone"
                       type="tel"
-                      placeholder={t("auth.phonePh")}
+                      placeholder={t("mentorForm.phonePh")}
                     />
                   </div>
                   <div className={s.errorMessage}>{t("auth.errPhone")}</div>
@@ -223,7 +262,7 @@ export default function MentorForm() {
                       value={teachTier}
                       onChange={(e) => {
                         setTeachTier(e.target.value as TeachTier | "");
-                        setTeachTop("");
+                        setTeachYears([]);
                       }}
                     >
                       <option value="" disabled>
@@ -240,27 +279,47 @@ export default function MentorForm() {
                 </div>
 
                 <div className={groupClass("teachTop")}>
-                  <label htmlFor="mentor-teach-top">{t("mentorForm.teachTop")}</label>
-                  <div className={s.inputWithIcon}>
-                    <i className="fa fa-calendar"></i>
-                    <select
-                      id="mentor-teach-top"
-                      value={teachTop}
-                      onChange={(e) => setTeachTop(e.target.value)}
-                      disabled={!teachTier}
-                    >
-                      <option value="" disabled>
-                        {t("mentorForm.teachTopSelect")}
-                      </option>
-                      {teachTier &&
-                        TEACH_YEARS[teachTier].map((code) => (
-                          <option key={code} value={code}>
+                  <label>{t("mentorForm.teachYearsLabel")}</label>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 8,
+                      paddingTop: 4,
+                    }}
+                  >
+                    {!teachTier && (
+                      <span className={m.fieldHint}>
+                        {t("mentorForm.teachCycleSelect")}
+                      </span>
+                    )}
+                    {teachTier &&
+                      TEACH_YEARS[teachTier].map((code) => {
+                        const on = teachYears.includes(code);
+                        return (
+                          <button
+                            key={code}
+                            type="button"
+                            onClick={() => toggleYear(code)}
+                            style={{
+                              padding: "7px 14px",
+                              borderRadius: 999,
+                              border: on
+                                ? "1px solid var(--primary, #534ab7)"
+                                : "1px solid #d1d5db",
+                              background: on ? "var(--primary, #534ab7)" : "#fff",
+                              color: on ? "#fff" : "inherit",
+                              fontWeight: 600,
+                              fontSize: 13,
+                              cursor: "pointer",
+                            }}
+                          >
                             {code}
-                          </option>
-                        ))}
-                    </select>
+                          </button>
+                        );
+                      })}
                   </div>
-                  <span className={m.fieldHint}>{t("mentorForm.teachHint")}</span>
+                  <span className={m.fieldHint}>{t("mentorForm.teachYearsHint")}</span>
                   <div className={s.errorMessage}>{t("mentorForm.errTeachTop")}</div>
                 </div>
               </div>

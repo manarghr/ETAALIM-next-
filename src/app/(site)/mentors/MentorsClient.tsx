@@ -26,11 +26,11 @@ const LEVELS: { tier: TeachTier; labelKey: string }[] = [
   { tier: "University", labelKey: "auth.cycleUniversity" },
 ];
 
-// "1AP–5AP" for a range, or the single year code.
+// The exact year codes a mentor teaches for a tier, e.g. "1AS, 2AS, 3AS".
 function teachRange(m: Mentor, tier: TeachTier): string {
   const codes = mentorYearCodes(m, tier);
   if (codes.length === 0) return "";
-  return codes.length > 1 ? `${codes[0]}–${codes[codes.length - 1]}` : codes[0];
+  return codes.join(", ");
 }
 
 function first(value: string | string[] | undefined): string {
