@@ -55,24 +55,32 @@ export async function sendMessage(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return getThread(mentorId);
+  if (!user) {
+    console.error("sendMessage: not logged in");
+    return getThread(mentorId);
+  }
 
-  await supabase.from("messages").insert([
+  // Both rows must have the SAME keys — a bulk insert with differing keys fills
+  // the missing ones with NULL (not the column default).
+  const { error } = await supabase.from("messages").insert([
     {
       user_id: user.id,
       mentor_id: mentorId,
       sender: "student",
       text,
       attachment: attachment ?? null,
+      auto: false,
     },
     {
       user_id: user.id,
       mentor_id: mentorId,
       sender: "mentor",
       text: "",
+      attachment: null,
       auto: true,
     },
   ]);
+  if (error) console.error("sendMessage error:", error.message);
 
   return getThread(mentorId);
 }
