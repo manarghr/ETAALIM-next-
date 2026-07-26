@@ -8,6 +8,7 @@ import {
   getThread,
   sendMessage,
   Attachment,
+  Message,
   MAX_ATTACHMENT_BYTES,
 } from "@/lib/messages";
 import styles from "./ChatDock.module.css";
@@ -37,22 +38,24 @@ export default function ChatDock({
   const { t, locale } = useI18n();
   const [text, setText] = useState("");
   const [pending, setPending] = useState<Attachment | null>(null);
-  const [tick, setTick] = useState(0);
+  const [thread, setThread] = useState<Message[]>([]);
   const [sizeError, setSizeError] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const threadRef = useRef<HTMLDivElement>(null);
 
   const mentor = getMentorById(mentorId);
-  const thread = getThread(mentorId);
+
+  // Load the conversation with this mentor from Supabase.
+  useEffect(() => {
+    getThread(mentorId).then(setThread);
+  }, [mentorId]);
 
   // Scroll to the newest message whenever the thread grows or we expand.
-  // (The parent keys this component by mentorId, so switching mentors remounts
-  // it with a fresh composer — no reset effect needed.)
   useEffect(() => {
     if (!minimized && threadRef.current) {
       threadRef.current.scrollTop = threadRef.current.scrollHeight;
     }
-  }, [tick, minimized]);
+  }, [thread, minimized]);
 
   if (!mentor) return null;
 
@@ -81,12 +84,12 @@ export default function ChatDock({
     reader.readAsDataURL(file);
   };
 
-  const send = () => {
+  const send = async () => {
     if (!canSend) return;
-    sendMessage(mentorId, text.trim(), pending ?? undefined);
+    const updated = await sendMessage(mentorId, text.trim(), pending ?? undefined);
     setText("");
     setPending(null);
-    setTick((n) => n + 1);
+    setThread(updated);
   };
 
   return (

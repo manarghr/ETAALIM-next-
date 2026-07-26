@@ -1,8 +1,10 @@
-// Lightweight student↔mentor messaging, mocked with localStorage. The mentor
-// sends a canned auto-reply so a thread feels alive in the demo.
+// Student↔mentor messaging, backed by the Supabase `messages` table. The mentor
+// sends a canned auto-reply so a thread feels alive (mentors are seed data, not
+// real users). RLS scopes every message to the logged-in student.
+import { createClient } from "@/lib/supabase/client";
 
-/** An image or file a message carries. Stored as a base64 data URL so the
- *  demo works without a backend/upload server. Kept small on purpose. */
+/** An image or file a message carries. Stored as a base64 data URL (kept small).
+ *  A future improvement is Supabase Storage instead of inline base64. */
 export interface Attachment {
   kind: "image" | "file";
   name: string;
@@ -21,66 +23,56 @@ export interface Message {
   date: string; // ISO
 }
 
-/** Largest attachment we'll keep — localStorage is small, so cap hard. */
+/** Largest attachment we'll keep. */
 export const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3 MB
 
-const KEY = "etaalim.messages";
+// The conversation with one mentor, oldest first.
+export async function getThread(mentorId: number): Promise<Message[]> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("messages")
+    .select("id, sender, text, attachment, auto, created_at")
+    .eq("mentor_id", mentorId)
+    .order("id", { ascending: true });
 
-type Threads = Record<number, Message[]>;
-
-function readAll(): Threads {
-  if (typeof window === "undefined") return {};
-  try {
-    const raw = localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Threads) : {};
-  } catch {
-    return {};
-  }
+  return (data ?? []).map((m) => ({
+    id: String(m.id),
+    from: m.sender === "mentor" ? "mentor" : "student",
+    text: (m.text as string) ?? "",
+    attachment: (m.attachment as Attachment) ?? undefined,
+    auto: !!m.auto,
+    date: m.created_at as string,
+  }));
 }
 
-function writeAll(t: Threads): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(KEY, JSON.stringify(t));
-  } catch {
-    /* ignore quota / privacy-mode errors */
-  }
-}
-
-function uid(): string {
-  return Math.random().toString(36).slice(2, 10);
-}
-
-export function getThread(mentorId: number): Message[] {
-  return readAll()[mentorId] ?? [];
-}
-
-export function sendMessage(
+// Send a student message (+ the mentor's canned auto-reply). Returns the thread.
+export async function sendMessage(
   mentorId: number,
   text: string,
   attachment?: Attachment
-): Message[] {
-  const all = readAll();
-  const now = Date.now();
-  const thread = all[mentorId] ?? [];
-  thread.push({
-    id: uid(),
-    from: "student",
-    text,
-    attachment,
-    date: new Date(now).toISOString(),
-  });
-  // canned mentor acknowledgement so the thread isn't one-sided in the demo.
-  // `auto` lets the UI render it in the active language instead of a stored
-  // English string.
-  thread.push({
-    id: uid(),
-    from: "mentor",
-    text: "",
-    auto: true,
-    date: new Date(now + 1000).toISOString(),
-  });
-  all[mentorId] = thread;
-  writeAll(all);
-  return thread;
+): Promise<Message[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return getThread(mentorId);
+
+  await supabase.from("messages").insert([
+    {
+      user_id: user.id,
+      mentor_id: mentorId,
+      sender: "student",
+      text,
+      attachment: attachment ?? null,
+    },
+    {
+      user_id: user.id,
+      mentor_id: mentorId,
+      sender: "mentor",
+      text: "",
+      auto: true,
+    },
+  ]);
+
+  return getThread(mentorId);
 }

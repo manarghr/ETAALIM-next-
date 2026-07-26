@@ -43,3 +43,7 @@ next-env.d.ts
 # Claude Code local files (not for the repo)
 CLAUDE.md
 AGENTS.md
+
+# personal backend notes (not for the repo)
+backend-process.md
+backend-guide.md
