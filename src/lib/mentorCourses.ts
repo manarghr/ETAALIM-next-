@@ -4,12 +4,14 @@
 // edit/delete their own). Courses created here are real catalog rows students
 // can find and buy. Fields mirror the platform's Course model.
 import { createClient } from "@/lib/supabase/client";
+import { getTrack } from "@/data/courses";
 
 export interface CourseInput {
   subject: string;
   description: string;
   major: string;
   tier: string;
+  track: string; // track key (year + stream), e.g. "hs_exp_3as" — drives the catalog
   level: string; // shown in the editor; not stored (mirrors the admin editor)
   date: string; // yyyy-mm-dd (start date)
   time: string; // HH:MM (24h)
@@ -26,6 +28,19 @@ export interface MentorCourse extends CourseInput {
   custom?: boolean;
 }
 
+// Which stream a high-school track belongs to (mirrors the admin editor).
+function streamOf(track: string): string | null {
+  if (track.startsWith("hs_exp")) return "Experimental Sciences";
+  if (track.startsWith("hs_math")) return "Mathematics";
+  if (track.startsWith("hs_tech")) return "Technical Mathematics";
+  if (track.startsWith("hs_gest")) return "Management & Economics";
+  if (track.startsWith("hs_philo")) return "Literature & Philosophy";
+  if (track.startsWith("hs_lang")) return "Foreign Languages";
+  if (track === "hs_tc_sci") return "Common Core — Science";
+  if (track === "hs_tc_let") return "Common Core — Letters";
+  return null;
+}
+
 // DB row -> the shape the editor/dashboard expect.
 function rowToCourse(r: Record<string, unknown>): MentorCourse {
   return {
@@ -34,6 +49,7 @@ function rowToCourse(r: Record<string, unknown>): MentorCourse {
     description: (r.description as string) ?? "",
     major: (r.major as string) ?? "",
     tier: (r.tier as string) ?? "",
+    track: (r.track as string) ?? "",
     level: (r.year_code as string) ?? (r.level as string) ?? "",
     date: (r.session_date as string) ?? "",
     time: (r.session_time as string) ?? "",
@@ -53,9 +69,16 @@ function inputToRow(input: Partial<CourseInput>): Record<string, unknown> {
   if (input.description !== undefined) row.description = input.description || null;
   if (input.major !== undefined) row.major = input.major;
   if (input.tier !== undefined) row.tier = input.tier;
-  // The editor's "level" is really the year (e.g. "3AS"); store it as year_code
-  // so it shows in the level column and distinguishes the course.
-  if (input.level !== undefined) row.year_code = input.level || null;
+  // The track (year + stream) drives the catalog browser: derive year_code, year
+  // and stream from it, exactly like the admin editor.
+  if (input.track !== undefined) {
+    const track = getTrack(input.track);
+    row.track = input.track || null;
+    row.year_code = track?.code ?? null;
+    const n = parseInt(track?.code ?? "", 10);
+    row.year = Number.isFinite(n) ? n : null;
+    row.stream = input.track ? streamOf(input.track) : null;
+  }
   if (input.date !== undefined) row.session_date = input.date || null;
   if (input.time !== undefined) row.session_time = input.time || null;
   if (input.price !== undefined) row.price = input.price;

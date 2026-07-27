@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { tr } from "@/data/localized";
-import { TIERS, formatDZD, formatDate } from "@/data/courses";
+import { TIERS, TRACKS, formatDZD, formatDate } from "@/data/courses";
 import { getRoster } from "@/data/roster";
 import { sessionDateFor, countdownOf } from "@/lib/schedule";
 import {
@@ -60,6 +60,7 @@ const EMPTY_FORM: CourseInput = {
   description: "",
   major: "",
   tier: "High School",
+  track: "",
   level: "",
   date: "",
   time: "16:00",
@@ -226,6 +227,7 @@ export default function MentorDashboardClient() {
       description: c.description ?? "",
       major: c.major,
       tier: c.tier,
+      track: c.track ?? "",
       level: c.level,
       date: c.date ?? "",
       time: c.time ?? "16:00",
@@ -1192,25 +1194,33 @@ export default function MentorDashboardClient() {
                   />
                 </label>
                 <label className={m.field}>
-                  <span>{t("mentorDash.fLevel")}</span>
-                  <input
-                    type="text"
-                    value={form.level}
-                    onChange={(e) => setForm({ ...form, level: e.target.value })}
-                    placeholder={t("mentorDash.fLevelPh")}
-                  />
-                </label>
-              </div>
-              <div className={m.fieldRow}>
-                <label className={m.field}>
                   <span>{t("mentorDash.fTier")}</span>
                   <select
                     value={form.tier}
-                    onChange={(e) => setForm({ ...form, tier: e.target.value })}
+                    onChange={(e) =>
+                      setForm({ ...form, tier: e.target.value, track: "" })
+                    }
                   >
                     {TIERS.map((tier) => (
                       <option key={tier} value={tier}>
                         {tr(tier, locale)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <div className={m.fieldRow}>
+                <label className={m.field}>
+                  <span>{t("mentorDash.fYear")}</span>
+                  <select
+                    value={form.track}
+                    onChange={(e) => setForm({ ...form, track: e.target.value })}
+                  >
+                    <option value="">{t("mentorDash.fYearNone")}</option>
+                    {TRACKS.filter((tk) => tk.tier === form.tier).map((tk) => (
+                      <option key={tk.key} value={tk.key}>
+                        {tk.code} · {t(`coursesPage.tracks.${tk.key}`)}
+                        {tk.exam ? ` (${tk.exam})` : ""}
                       </option>
                     ))}
                   </select>
