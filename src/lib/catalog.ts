@@ -5,6 +5,7 @@ import { Course, Tier, TIERS } from "@/data/courses";
 export interface EffectiveCourse extends Course {
   description?: string;
   mentorIds: number[];
+  yearCode?: string; // e.g. "3AS" — what distinguishes same-subject courses
 }
 
 // Map a DB row (snake_case) to the app's Course shape (camelCase).
@@ -30,6 +31,7 @@ function rowToCourse(r: Record<string, unknown>): EffectiveCourse {
     mentorId,
     description: (r.description as string) ?? undefined,
     mentorIds: [mentorId],
+    yearCode: (r.year_code as string) ?? "",
   };
 }
 

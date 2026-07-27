@@ -38,7 +38,11 @@ export default function MentorProfileClient({
   const [mentorCourses, setMentorCourses] = useState<EffectiveCourse[]>([]);
   useEffect(() => {
     effectiveCourses().then((all) =>
-      setMentorCourses(all.filter((c) => c.mentorId === seedMentor.id))
+      setMentorCourses(
+        all
+          .filter((c) => c.mentorId === seedMentor.id)
+          .sort((a, b) => b.id - a.id) // newest first
+      )
     );
   }, [seedMentor.id]);
 
@@ -243,7 +247,7 @@ export default function MentorProfileClient({
                         {mentorCourses.map((course) => (
                           <tr key={course.id}>
                             <td>{tr(course.subject, locale)}</td>
-                            <td>{tr(course.level, locale)}</td>
+                            <td>{course.yearCode || tr(course.level, locale)}</td>
                             <td>{formatDate(course.date, locale)}</td>
                             <td className={styles.price}>
                               {formatDZD(course.price, locale)}

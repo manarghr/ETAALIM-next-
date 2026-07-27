@@ -8,7 +8,6 @@ import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
 import { setIdentity, setSignupProfile } from "@/lib/student";
-import { recordRegistration } from "@/lib/registeredStudents";
 import { tr } from "@/data/localized";
 import { CYCLES, YEARS, streamsForYear, Cycle } from "@/data/education";
 import styles from "./AuthForm.module.css";
@@ -146,17 +145,6 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       email,
       age: ageNum,
       phone,
-      parentEmail,
-      parentPhone,
-      cycle: cycle as Cycle,
-      year,
-      extra,
-    });
-    recordRegistration({
-      name,
-      email,
-      phone,
-      age: ageNum,
       parentEmail,
       parentPhone,
       cycle: cycle as Cycle,

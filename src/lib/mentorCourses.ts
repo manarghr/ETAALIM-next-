@@ -34,7 +34,7 @@ function rowToCourse(r: Record<string, unknown>): MentorCourse {
     description: (r.description as string) ?? "",
     major: (r.major as string) ?? "",
     tier: (r.tier as string) ?? "",
-    level: (r.level as string) ?? "",
+    level: (r.year_code as string) ?? (r.level as string) ?? "",
     date: (r.session_date as string) ?? "",
     time: (r.session_time as string) ?? "",
     price: (r.price as number) ?? 0,
@@ -53,6 +53,9 @@ function inputToRow(input: Partial<CourseInput>): Record<string, unknown> {
   if (input.description !== undefined) row.description = input.description || null;
   if (input.major !== undefined) row.major = input.major;
   if (input.tier !== undefined) row.tier = input.tier;
+  // The editor's "level" is really the year (e.g. "3AS"); store it as year_code
+  // so it shows in the level column and distinguishes the course.
+  if (input.level !== undefined) row.year_code = input.level || null;
   if (input.date !== undefined) row.session_date = input.date || null;
   if (input.time !== undefined) row.session_time = input.time || null;
   if (input.price !== undefined) row.price = input.price;
