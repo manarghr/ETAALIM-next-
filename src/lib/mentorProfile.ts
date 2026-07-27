@@ -4,7 +4,7 @@
 // server-side and become the source the public page can read later. RLS scopes
 // every read/write to the mentor's own row (auth.uid() = id).
 import { createClient } from "@/lib/supabase/client";
-import { Certificate, getMentorById } from "@/data/mentors";
+import { Certificate, TeachTier, Teaching, getMentorById } from "@/data/mentors";
 
 export interface MentorProfileData {
   name: string;
@@ -21,6 +21,23 @@ export interface MentorProfileData {
   hourlyRate: number;
   availability: string;
   profilePicture: string;
+  teaching: Teaching[];
+}
+
+// The current mentor's numeric public id (used to attribute their courses so
+// they show on the public directory/profile). Null if not signed in.
+export async function getMyMentorPublicId(): Promise<number | null> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+  const { data } = await supabase
+    .from("mentors")
+    .select("public_id")
+    .eq("id", user.id)
+    .maybeSingle();
+  return (data?.public_id as number) ?? null;
 }
 
 // Load the current mentor's profile, or null if not signed in / no row yet.
@@ -36,13 +53,16 @@ export async function getMyMentorProfile(): Promise<MentorProfileData | null> {
     supabase
       .from("mentors")
       .select(
-        "major, level, experience, skills, title, bio, certificates, achievements, hourly_rate, availability, profile_picture"
+        "major, level, experience, skills, title, bio, certificates, achievements, hourly_rate, availability, profile_picture, teaching_tier, teaching_years"
       )
       .eq("id", user.id)
       .maybeSingle(),
   ]);
 
   if (!mentor && !profile) return null;
+
+  const tier = mentor?.teaching_tier as TeachTier | null;
+  const years = (mentor?.teaching_years as string[] | null) ?? [];
 
   return {
     name: (profile?.name as string) ?? "",
@@ -64,6 +84,7 @@ export async function getMyMentorProfile(): Promise<MentorProfileData | null> {
     hourlyRate: (mentor?.hourly_rate as number) ?? 0,
     availability: (mentor?.availability as string) ?? "",
     profilePicture: (mentor?.profile_picture as string) ?? "/images/mentor-default.jpg",
+    teaching: tier ? [{ tier, years }] : [],
   };
 }
 

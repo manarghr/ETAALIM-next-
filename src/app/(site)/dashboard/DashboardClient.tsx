@@ -1,8 +1,9 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import AttachmentView from "@/components/AttachmentView";
 import { useRouter } from "next/navigation";
 import CourseBanner from "@/components/CourseBanner";
 import TopUpModal from "@/components/TopUpModal";
@@ -22,24 +23,26 @@ import { educationLabel, Cycle } from "@/data/education";
 import { getLessons } from "@/data/lessons";
 import { getProgressCounts, pctOf } from "@/lib/progress";
 import FavoriteButton from "@/components/FavoriteButton";
-import { getStudent, isMinor, addFunds, Student } from "@/lib/student";
 import { getFollowedMentorIds, toggleFollow } from "@/lib/follows";
 import { getMyEnrollments, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
 import { getBalance, topUp, getTransactions, WalletTx } from "@/lib/wallet";
 import { getFavoriteIds, getFavorites } from "@/lib/favorites";
 import { getSeenAt, markSeen } from "@/lib/seen";
+import { getRegisteredMentors } from "@/lib/registeredMentors";
 import { getProfile, Profile } from "@/lib/profile";
 import { getApprovals, createApproval, setApprovalStatus, Approval } from "@/lib/approvals";
-import { sessionDateFor, countdownOf } from "@/lib/schedule";
+import { countdownOf } from "@/lib/schedule";
 import {
   getStudentInbox,
   getThread,
   sendMessage,
   subscribeStudentInbox,
   subscribeThread,
+  readFileAsAttachment,
   StudentThread,
   Message,
+  Attachment,
 } from "@/lib/messages";
 import styles from "./dashboard.module.css";
 // Reuse the mentor dashboard's inbox styling so both panels look identical.
@@ -103,6 +106,8 @@ export default function DashboardClient() {
   const [activeMentorId, setActiveMentorId] = useState<number | null>(null);
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
   const [replyText, setReplyText] = useState("");
+  const [replyAttach, setReplyAttach] = useState<Attachment | null>(null);
+  const replyFileRef = useRef<HTMLInputElement>(null);
   // Real notifications feed (mentor replies / purchases / top-ups) + last seen.
   const [studentNotifs, setStudentNotifs] = useState<StudentNotification[]>([]);
   const [notifSeen, setNotifSeen] = useState<string>("");
@@ -147,6 +152,12 @@ export default function DashboardClient() {
     getProfile().then(setProfile);
   }, []);
 
+  // Registered (non-seed) mentors, so followed/messaged real mentors resolve.
+  const [registeredMentors, setRegisteredMentors] = useState<Mentor[]>([]);
+  useEffect(() => {
+    getRegisteredMentors().then(setRegisteredMentors);
+  }, []);
+
   // Load the mentors the user follows (refreshes on follow/unfollow).
   const [followedIds, setFollowedIds] = useState<number[]>([]);
   useEffect(() => {
@@ -188,9 +199,15 @@ export default function DashboardClient() {
         router.replace("/login");
       } else {
         setMounted(true); //confirmed -> show the dahsboard
-        // Arriving from a "new message" notification opens the Messages panel.
+        // Arriving from a notification (?view=messages) or a "Message" button on
+        // a mentor's profile (?chat=<id>) opens the Messages panel.
         const params = new URLSearchParams(window.location.search);
         if (params.get("view") === "messages") setSection("messages");
+        const chat = params.get("chat");
+        if (chat) {
+          setActiveMentorId(parseInt(chat, 10));
+          setSection("messages");
+        }
       }
     });
   }, [router]);
@@ -271,11 +288,24 @@ export default function DashboardClient() {
 
   // Send the student's message in the open conversation.
   const sendReply = async () => {
-    if (activeMentorId === null || !replyText.trim()) return;
-    const updated = await sendMessage(activeMentorId, replyText.trim());
+    if (activeMentorId === null || (!replyText.trim() && !replyAttach)) return;
+    const updated = await sendMessage(
+      activeMentorId,
+      replyText.trim(),
+      replyAttach ?? undefined
+    );
     setActiveMessages(updated);
     setReplyText("");
+    setReplyAttach(null);
     getStudentInbox().then(setInbox);
+  };
+  const pickReplyFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const att = await readFileAsAttachment(file);
+    if (att) setReplyAttach(att);
+    else showToast(t("chat.tooLarge", { max: "3 MB" }));
   };
 
   // A thread is unread when its newest message is from the mentor, it isn't the
@@ -294,31 +324,18 @@ export default function DashboardClient() {
     return t(key, { n });
   };
   const money = (amount: number) => formatDZD(amount, locale);
+  // Resolve a mentor id to a seed mentor or a registered one.
+  const resolveMentor = (id: number): Mentor | null =>
+    getMentorById(id) ?? registeredMentors.find((m) => m.id === id) ?? null;
   const mentorName = (id: number) => {
-    const m = getMentorById(id);
+    const m = resolveMentor(id);
     return m ? mentorDisplayName(m, locale) : "";
   };
-  // New signups carry structured education; older/demo records fall back to
-  // the legacy `grade` string.
-  const gradeLabel = (s: Student) =>
-    s.educationCycle
-      ? educationLabel(
-          {
-            cycle: s.educationCycle as Cycle,
-            year: s.educationYear ?? "",
-            extra: s.educationExtra ?? "",
-          },
-          locale
-        )
-      : tr(s.grade, locale);
-
   // ----- derived state (re-read on every render; cheap) -----
   void tick;
-  const student = getStudent();
 
-  // Identity shown in the UI comes from the real profile (falls back to the
-  // cached localStorage identity until it loads).
-  const displayName = profile?.name || student.name;
+  // Identity + education come from the real Supabase profile.
+  const displayName = profile?.name ?? "";
   const displayInitials = displayName
     .split(" ")
     .map((w) => w[0])
@@ -334,7 +351,10 @@ export default function DashboardClient() {
         },
         locale
       )
-    : gradeLabel(student);
+    : "";
+  // A minor (under 18) needs parental consent for purchases.
+  const minor = profile?.age != null && profile.age < 18;
+  const parentEmail = profile?.parentEmail ?? "";
 
   // Dedupe by course: a student can now enroll in the same course in several
   // modes (recorded + private…), but it's still one course in their list.
@@ -348,12 +368,16 @@ export default function DashboardClient() {
       return true;
     });
 
+  // Real session dates come from each course's scheduled date + time.
   const sessions = enrolledCourses
-    .map((x, i) => ({ ...x, date: sessionDateFor(i, base) }))
+    .map((x) => ({
+      ...x,
+      date: new Date(`${x.course.date}T${x.course.time || "16:00"}`),
+    }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const followedMentors = followedIds
-    .map((id) => getMentorById(id))
+    .map((id) => resolveMentor(id))
     .filter((m): m is Mentor => Boolean(m));
 
   const recommended = courses
@@ -383,16 +407,16 @@ export default function DashboardClient() {
     setBuyTarget(null);
 
     // Minors go through the parental-consent flow (a pending approval request).
-    if (isMinor(student)) {
+    if (minor) {
       await createApproval({
         courseId: c.id,
         courseName: c.subject,
         amount: price,
         mode: "recorded",
-        parentEmail: student.parentEmail,
+        parentEmail: parentEmail,
       });
       reload();
-      showToast(t("dash.toastApprovalSent", { email: student.parentEmail }));
+      showToast(t("dash.toastApprovalSent", { email: parentEmail }));
       return;
     }
 
@@ -456,7 +480,6 @@ export default function DashboardClient() {
     try {
       const newBalance = await topUp(amount); // real: adds money + logs it
       setBalance(newBalance); // update the displayed balance right away
-      addFunds(amount); // TEMP: keep the old localStorage wallet in sync
       reload();
       showToast(t("dash.toastToppedUp", { amount: money(amount) }));
     } catch (e) {
@@ -493,7 +516,7 @@ export default function DashboardClient() {
 
             <div className={styles.walletMini}>
               <span className={styles.wmLabel}>{t("dash.walletBalance")}</span>
-              <span className={styles.wmValue}>{money(balance ?? student.balance)}</span>
+              <span className={styles.wmValue}>{money(balance ?? 0)}</span>
             </div>
 
             <nav className={styles.nav}>
@@ -556,7 +579,7 @@ export default function DashboardClient() {
                     <span className={styles.statIcon} style={{ color: "#e0894a" }}>
                       <i className="fa fa-money"></i>
                     </span>
-                    <span className={styles.statValue}>{money(balance ?? student.balance)}</span>
+                    <span className={styles.statValue}>{money(balance ?? 0)}</span>
                     <span className={styles.statLabel}>{t("dash.walletBalance")}</span>
                   </div>
                   <div className={styles.statCard}>
@@ -894,7 +917,7 @@ export default function DashboardClient() {
 
                 <div className={styles.walletCard}>
                   <span className={styles.wcLabel}>{t("dash.availableBalance")}</span>
-                  <span className={styles.wcBalance}>{money(balance ?? student.balance)}</span>
+                  <span className={styles.wcBalance}>{money(balance ?? 0)}</span>
                   <div className={styles.topupRow}>
                     {TOPUP_AMOUNTS.map((a) => (
                       <button
@@ -1087,11 +1110,42 @@ export default function DashboardClient() {
                                   msg.from === "student" ? ibx.bubbleMine : ibx.bubbleTheirs
                                 }`}
                               >
-                                {msg.text}
+                                {msg.attachment && (
+                                  <AttachmentView attachment={msg.attachment} />
+                                )}
+                                {msg.text && <div>{msg.text}</div>}
                               </div>
                             ))}
                           </div>
+                          {replyAttach && (
+                            <div className={ibx.pendingAttach}>
+                              <i className="fa fa-paperclip"></i>
+                              <span>{replyAttach.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setReplyAttach(null)}
+                                aria-label="remove"
+                              >
+                                <i className="fa fa-times"></i>
+                              </button>
+                            </div>
+                          )}
                           <div className={ibx.replyBar}>
+                            <input
+                              ref={replyFileRef}
+                              type="file"
+                              accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                              hidden
+                              onChange={pickReplyFile}
+                            />
+                            <button
+                              type="button"
+                              className={ibx.attachBtn}
+                              onClick={() => replyFileRef.current?.click()}
+                              aria-label={t("chat.attach")}
+                            >
+                              <i className="fa fa-paperclip"></i>
+                            </button>
                             <input
                               type="text"
                               placeholder={t("dash.msgPlaceholder")}
@@ -1099,7 +1153,10 @@ export default function DashboardClient() {
                               onChange={(e) => setReplyText(e.target.value)}
                               onKeyDown={(e) => e.key === "Enter" && sendReply()}
                             />
-                            <button onClick={sendReply} disabled={!replyText.trim()}>
+                            <button
+                              onClick={sendReply}
+                              disabled={!replyText.trim() && !replyAttach}
+                            >
                               <i className="fa fa-paper-plane"></i>
                             </button>
                           </div>
@@ -1203,10 +1260,10 @@ export default function DashboardClient() {
                 course: tr(buyTarget.subject, locale),
               })}
             </p>
-            {isMinor(student) && (
+            {minor && (
               <p className={styles.consentNote}>
                 <i className="fa fa-shield"></i>{" "}
-                {t("dash.consentNote", { email: student.parentEmail })}
+                {t("dash.consentNote", { email: parentEmail })}
               </p>
             )}
             <div className={styles.modalActions}>
@@ -1214,7 +1271,7 @@ export default function DashboardClient() {
                 {t("dash.cancel")}
               </button>
               <button className={styles.primaryBtn} onClick={confirmBuy}>
-                {isMinor(student)
+                {minor
                   ? t("dash.requestApproval")
                   : t("dash.confirmPay")}
               </button>

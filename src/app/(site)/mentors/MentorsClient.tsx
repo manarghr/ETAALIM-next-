@@ -1,7 +1,10 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
+import { getRegisteredMentors } from "@/lib/registeredMentors";
+import { getMentorRatings, MentorRating } from "@/lib/courseReviews";
 import {
   filterMentors,
   getMentorMajors,
@@ -54,8 +57,19 @@ export default function MentorsClient({
   let page = parseInt(first(sp.page), 10);
   if (!Number.isFinite(page) || page < 1) page = 1;
 
+  // Real registered mentors, listed alongside the seed ones.
+  const [registered, setRegistered] = useState<Mentor[]>([]);
+  const [ratings, setRatings] = useState<Record<number, MentorRating>>({});
+  useEffect(() => {
+    getRegisteredMentors().then(setRegistered);
+    getMentorRatings().then(setRatings);
+  }, []);
+
   const majors = ["All", ...getMentorMajors()];
-  const filtered = filterMentors({ search, major }).filter((m) => {
+  const filtered = [
+    ...filterMentors({ search, major }),
+    ...filterMentors({ search, major }, registered),
+  ].filter((m) => {
     if (!level) return true;
     return year ? mentorTeachesYear(m, level, year) : mentorTeachesTier(m, level);
   });
@@ -224,12 +238,30 @@ export default function MentorsClient({
                       ))}
                     </div>
                     <div className={styles.stars}>
-                      <i className="fa fa-star"></i>
-                      <i className="fa fa-star"></i>
-                      <i className="fa fa-star"></i>
-                      <i className="fa fa-star"></i>
-                      <i className="fa fa-star-half-o"></i>
-                      <span>4.5 (128)</span>
+                      {ratings[mentor.id]?.count ? (
+                        <>
+                          {[0, 1, 2, 3, 4].map((i) => {
+                            const avg = ratings[mentor.id].avg;
+                            return (
+                              <i
+                                key={i}
+                                className={`fa ${
+                                  avg >= i + 1
+                                    ? "fa-star"
+                                    : avg >= i + 0.5
+                                    ? "fa-star-half-o"
+                                    : "fa-star-o"
+                                }`}
+                              ></i>
+                            );
+                          })}
+                          <span>
+                            {ratings[mentor.id].avg.toFixed(1)} ({ratings[mentor.id].count})
+                          </span>
+                        </>
+                      ) : (
+                        <span>{t("mentorDetail.newMentor")}</span>
+                      )}
                     </div>
                     <div className={styles.footer}>
                       <Link href={`/mentors/${mentor.id}`} className={styles.link}>

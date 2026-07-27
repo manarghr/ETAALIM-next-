@@ -3,25 +3,24 @@
 import {
   getEnrollmentCounts,
   getMentorRoster,
+  getMentorEarnings,
   getStudentsSeenAt,
   markStudentsSeen,
   subscribeEnrollments,
   RosterEntry,
+  EarningTx,
 } from "@/lib/mentorRoster";
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, useRef, FormEvent } from "react";
+import AttachmentView from "@/components/AttachmentView";
+import { Attachment, readFileAsAttachment } from "@/lib/messages";
 import { useRouter } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { tr } from "@/data/localized";
 import { TIERS, TRACKS, formatDZD, formatDate } from "@/data/courses";
 import { getRoster } from "@/data/roster";
-import { sessionDateFor, countdownOf } from "@/lib/schedule";
-import {
-  getMentorAccount,
-  updateMentorProfile,
-  totalEarnings,
-  monthEarnings,
-} from "@/lib/mentor";
+import { countdownOf } from "@/lib/schedule";
+import { getMentorAccount, updateMentorProfile } from "@/lib/mentor";
 import {
   getMentorCourses,
   addCourse,
@@ -38,7 +37,12 @@ import {
 } from "@/lib/mentorInbox";
 import { Certificate } from "@/data/mentors";
 import MentorMedia from "@/components/MentorMedia";
-import { getMyMentorProfile, saveMyMentorProfile } from "@/lib/mentorProfile";
+import {
+  getMyMentorProfile,
+  getMyMentorPublicId,
+  saveMyMentorProfile,
+  MentorProfileData,
+} from "@/lib/mentorProfile";
 import { getLastRead, markThreadRead } from "@/lib/threadReads";
 import {
   getMentorNotifications,
@@ -115,8 +119,15 @@ export default function MentorDashboardClient() {
 
   // The mentor's courses, loaded from Supabase (their owned catalog rows).
   const [courses, setCourses] = useState<MentorCourse[]>([]);
+  // The mentor's numeric public id — new courses are attributed to it so they
+  // show on the public directory/profile.
+  const [publicId, setPublicId] = useState<number | null>(null);
   // Real enrolled students (for the Students tab, grouped by session type).
   const [realRoster, setRealRoster] = useState<RosterEntry[]>([]);
+  // Real earnings (payments from enrollments in the mentor's courses).
+  const [earnings, setEarnings] = useState<EarningTx[]>([]);
+  // The mentor's real identity (name/avatar/major/teaching…) from Supabase.
+  const [mentorInfo, setMentorInfo] = useState<MentorProfileData | null>(null);
   // Activity feed (messages / enrollments / follows) + when it was last seen.
   const [notifs, setNotifs] = useState<MentorNotification[]>([]);
   const [notifSeen, setNotifSeen] = useState<string>("");
@@ -128,6 +139,8 @@ export default function MentorDashboardClient() {
   const [inbox, setInbox] = useState<InboxThread[]>([]);
   const [activeThread, setActiveThread] = useState<string | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [replyAttach, setReplyAttach] = useState<Attachment | null>(null);
+  const replyFileRef = useRef<HTMLInputElement>(null);
 
   // Profile form — mirrors the public mentor profile fields
   const [pTitle, setPTitle] = useState("");
@@ -175,6 +188,7 @@ export default function MentorDashboardClient() {
     // their rich demo data until they save their own).
     getMyMentorProfile().then((prof) => {
       if (!prof) return;
+      setMentorInfo(prof);
       if (prof.title) setPTitle(prof.title);
       if (prof.bio) setPBio(prof.bio);
       if (prof.major) setPMajor(prof.major);
@@ -195,12 +209,15 @@ export default function MentorDashboardClient() {
   useEffect(() => {
     if (!mounted) return;
     getMentorCourses().then(setCourses);
+    getMyMentorPublicId().then(setPublicId);
     getEnrollmentCounts().then(setCounts);
     getMentorRoster().then(setRealRoster);
+    getMentorEarnings().then(setEarnings);
     getStudentsSeenAt().then(setStudentsSeen);
     const unsubscribe = subscribeEnrollments(() => {
       getEnrollmentCounts().then(setCounts);
       getMentorRoster().then(setRealRoster);
+      getMentorEarnings().then(setEarnings);
     });
     return unsubscribe;
   }, [mounted]);
@@ -263,12 +280,26 @@ export default function MentorDashboardClient() {
   const mentorId = account.id;
   const rating = (4.6 + (mentorId % 4) * 0.1).toFixed(1);
 
-  const roster = courses.flatMap((c) =>
-    getRoster(c.id).map((s) => ({ student: s, course: c }))
-  );
+  // Display identity: prefer the real Supabase profile, fall back to the cached
+  // account for the first render before it loads.
+  const meName = mentorInfo?.name || account.name;
+  const meAvatar = mentorInfo?.profilePicture || account.profilePicture;
+  const meMajor = mentorInfo?.major || account.major;
+  const meTitle = mentorInfo?.title || account.title;
+  const meEmail = mentorInfo?.email || account.email;
+  const mePhone = mentorInfo?.phone || account.phone;
+  const meExperience = mentorInfo?.experience ?? account.experience;
+  const meTeaching = mentorInfo?.teaching?.length
+    ? mentorInfo.teaching
+    : account.teaching;
 
+
+  // Real session dates from each course's scheduled date + time.
   const sessions = courses
-    .map((c, i) => ({ course: c, date: sessionDateFor(i, base) }))
+    .map((c) => ({
+      course: c,
+      date: new Date(`${c.date || "2099-01-01"}T${c.time || "16:00"}`),
+    }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   // A thread is unread when its newest message is from the student, it isn't the
@@ -281,11 +312,18 @@ export default function MentorDashboardClient() {
   };
   const unread = inbox.filter(isUnread).length;
 
-  const earned = mounted ? totalEarnings() : 0;
-  const thisMonth = mounted ? monthEarnings() : 0;
+  // Real earnings (from actual enrollments in the mentor's courses).
+  const earned = earnings.reduce((sum, tx) => sum + tx.amount, 0);
+  const now = new Date();
+  const thisMonth = earnings
+    .filter((tx) => {
+      const d = new Date(tx.date);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    })
+    .reduce((sum, tx) => sum + tx.amount, 0);
 
   // earnings grouped by course subject
-  const byCourse = account.earnings.reduce<Record<string, number>>((acc, tx) => {
+  const byCourse = earnings.reduce<Record<string, number>>((acc, tx) => {
     acc[tx.subject] = (acc[tx.subject] ?? 0) + tx.amount;
     return acc;
   }, {});
@@ -323,7 +361,7 @@ export default function MentorDashboardClient() {
     e.preventDefault();
     if (!form.subject.trim()) return;
     if (editing === "new") {
-      setCourses(await addCourse(mentorId, form));
+      setCourses(await addCourse(publicId ?? mentorId, form));
       showToast(t("mentorDash.toastCourseCreated"));
     } else if (editing) {
       setCourses(await updateCourse(editing.id, form));
@@ -340,11 +378,24 @@ export default function MentorDashboardClient() {
 
   const thread = inbox.find((th) => th.studentId === activeThread) ?? null;
   const sendReply = async () => {
-    if (!thread || !replyText.trim()) return;
-    const updated = await replyToThread(thread.studentId, replyText.trim());
+    if (!thread || (!replyText.trim() && !replyAttach)) return;
+    const updated = await replyToThread(
+      thread.studentId,
+      replyText.trim(),
+      replyAttach ?? undefined
+    );
     setInbox(updated);
     setReplyText("");
+    setReplyAttach(null);
     showToast(t("mentorDash.toastReplySent"));
+  };
+  const pickReplyFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    const att = await readFileAsAttachment(file);
+    if (att) setReplyAttach(att);
+    else showToast(t("chat.tooLarge", { max: "3 MB" }));
   };
 
   // Skill tag helpers
@@ -431,9 +482,9 @@ export default function MentorDashboardClient() {
           {/* ===== Sidebar ===== */}
           <aside className={shared.sidebar}>
             <div className={shared.profile}>
-              <img className={m.sideAvatar} src={account.profilePicture} alt={account.name} />
-              <div className={shared.pName}>{account.name}</div>
-              <div className={shared.pGrade}>{tr(account.major, locale)}</div>
+              <img className={m.sideAvatar} src={meAvatar} alt={meName} />
+              <div className={shared.pName}>{meName}</div>
+              <div className={shared.pGrade}>{tr(meMajor, locale)}</div>
             </div>
 
             <div className={shared.walletMini}>
@@ -474,7 +525,7 @@ export default function MentorDashboardClient() {
             {section === "overview" && (
               <section>
                 <div className={shared.panelHead}>
-                  <h1>{t("mentorDash.welcome", { name: account.name.split(" ")[0] })}</h1>
+                  <h1>{t("mentorDash.welcome", { name: meName.split(" ")[0] })}</h1>
                   <p>{t("mentorDash.welcomeSub")}</p>
                 </div>
 
@@ -483,7 +534,7 @@ export default function MentorDashboardClient() {
                     <span className={shared.statIcon} style={{ color: "#534ab7" }}>
                       <i className="fa fa-users"></i>
                     </span>
-                    <span className={shared.statValue}>{roster.length}</span>
+                    <span className={shared.statValue}>{realRoster.length}</span>
                     <span className={shared.statLabel}>{t("mentorDash.statStudents")}</span>
                   </div>
                   <div className={shared.statCard}>
@@ -533,18 +584,27 @@ export default function MentorDashboardClient() {
                 )}
 
                 <h3 className={shared.blockTitle}>{t("mentorDash.recentStudents")}</h3>
-                <div className={m.studentList}>
-                  {roster.slice(0, 5).map(({ student, course }) => (
-                    <div key={student.id} className={m.studentRow}>
-                      <span className={m.studentAvatar}>{student.initials}</span>
-                      <div className={m.studentInfo}>
-                        <b>{student.name}</b>
-                        <span>{courseTitle(course)}</span>
-                      </div>
-                      <span className={m.progressChip}>{student.progress}%</span>
-                    </div>
-                  ))}
-                </div>
+                {realRoster.length === 0 ? (
+                  <p className={shared.muted}>{t("mentorDash.noStudents")}</p>
+                ) : (
+                  <div className={m.studentList}>
+                    {realRoster.slice(0, 5).map((r, i) => {
+                      const course = courses.find((c) => c.id === r.courseId);
+                      return (
+                        <div
+                          key={`${r.courseId}-${r.studentId}-${i}`}
+                          className={m.studentRow}
+                        >
+                          <span className={m.studentAvatar}>{r.initials}</span>
+                          <div className={m.studentInfo}>
+                            <b>{r.name}</b>
+                            <span>{course ? courseTitle(course) : ""}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             )}
 
@@ -724,18 +784,22 @@ export default function MentorDashboardClient() {
                 </div>
 
                 <h3 className={shared.blockTitle}>{t("mentorDash.transactions")}</h3>
-                <div className={m.txList}>
-                  {account.earnings.slice(0, 10).map((tx) => (
-                    <div key={tx.id} className={m.txRow}>
-                      <span className={m.txIcon}><i className="fa fa-arrow-down"></i></span>
-                      <div className={m.txInfo}>
-                        <b>{tr(tx.subject, locale)}</b>
-                        <span>{t("mentorDash.fromStudent", { student: tx.student })} · {formatDate(tx.date.slice(0, 10), locale)}</span>
+                {earnings.length === 0 ? (
+                  <p className={shared.muted}>{t("mentorDash.noEarnings")}</p>
+                ) : (
+                  <div className={m.txList}>
+                    {earnings.slice(0, 10).map((tx) => (
+                      <div key={tx.id} className={m.txRow}>
+                        <span className={m.txIcon}><i className="fa fa-arrow-down"></i></span>
+                        <div className={m.txInfo}>
+                          <b>{tr(tx.subject, locale)}</b>
+                          <span>{t("mentorDash.fromStudent", { student: tx.student })} · {formatDate(tx.date.slice(0, 10), locale)}</span>
+                        </div>
+                        <span className={m.txAmount}>+{money(tx.amount)}</span>
                       </div>
-                      <span className={m.txAmount}>+{money(tx.amount)}</span>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </section>
             )}
 
@@ -804,11 +868,42 @@ export default function MentorDashboardClient() {
                                   msg.from === "mentor" ? m.bubbleMine : m.bubbleTheirs
                                 }`}
                               >
-                                {inboxText(msg)}
+                                {msg.attachment && (
+                                  <AttachmentView attachment={msg.attachment} />
+                                )}
+                                {msg.text && <div>{inboxText(msg)}</div>}
                               </div>
                             ))}
                           </div>
+                          {replyAttach && (
+                            <div className={m.pendingAttach}>
+                              <i className="fa fa-paperclip"></i>
+                              <span>{replyAttach.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => setReplyAttach(null)}
+                                aria-label="remove"
+                              >
+                                <i className="fa fa-times"></i>
+                              </button>
+                            </div>
+                          )}
                           <div className={m.replyBar}>
+                            <input
+                              ref={replyFileRef}
+                              type="file"
+                              accept="image/*,.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.zip"
+                              hidden
+                              onChange={pickReplyFile}
+                            />
+                            <button
+                              type="button"
+                              className={m.attachBtn}
+                              onClick={() => replyFileRef.current?.click()}
+                              aria-label={t("chat.attach")}
+                            >
+                              <i className="fa fa-paperclip"></i>
+                            </button>
                             <input
                               type="text"
                               placeholder={t("mentorDash.replyPh")}
@@ -816,7 +911,10 @@ export default function MentorDashboardClient() {
                               onChange={(e) => setReplyText(e.target.value)}
                               onKeyDown={(e) => e.key === "Enter" && sendReply()}
                             />
-                            <button onClick={sendReply} disabled={!replyText.trim()}>
+                            <button
+                              onClick={sendReply}
+                              disabled={!replyText.trim() && !replyAttach}
+                            >
                               <i className="fa fa-paper-plane"></i>
                             </button>
                           </div>
@@ -890,10 +988,10 @@ export default function MentorDashboardClient() {
 
                 <div className={m.profileCard}>
                   <div className={m.profileTop}>
-                    <img className={m.profileAvatar} src={account.profilePicture} alt={account.name} />
+                    <img className={m.profileAvatar} src={meAvatar} alt={meName} />
                     <div>
-                      <b>{account.name}</b>
-                      <span>{pTitle || account.title}</span>
+                      <b>{meName}</b>
+                      <span>{pTitle || meTitle}</span>
                     </div>
                   </div>
 
@@ -1103,7 +1201,7 @@ export default function MentorDashboardClient() {
           layout (reusing its CSS module `pv`), fed by the LIVE unsaved form
           state so edits show before saving. */}
       {showPreview && (() => {
-        const previewYears = (account.teaching ?? []).flatMap((te) => te.years);
+        const previewYears = (meTeaching ?? []).flatMap((te) => te.years);
         return (
           <div className={m.previewOverlay}>
             <div className={m.previewBar}>
@@ -1121,11 +1219,11 @@ export default function MentorDashboardClient() {
                 <div className="container">
                   <div className={pv.headerInner}>
                     <div className={pv.headerAvatar}>
-                      <img src={account.profilePicture} alt={account.name} />
+                      <img src={meAvatar} alt={meName} />
                     </div>
                     <div className={pv.headerText}>
-                      <h1>{account.name}</h1>
-                      <p className={pv.headerTitle}>{pTitle || account.title}</p>
+                      <h1>{meName}</h1>
+                      <p className={pv.headerTitle}>{pTitle || meTitle}</p>
                       <div className={pv.headerRating}>
                         <span className={pv.stars}>
                           <i className="fa fa-star"></i>
@@ -1135,7 +1233,7 @@ export default function MentorDashboardClient() {
                           <i className="fa fa-star-half-o"></i>
                         </span>
                         4.5 · 128 {t("mentorDetail.reviews")} ·{" "}
-                        {pExp || account.experience} {t("mentorDetail.yearsExperience")}
+                        {pExp || meExperience} {t("mentorDetail.yearsExperience")}
                       </div>
                     </div>
                   </div>
@@ -1151,10 +1249,10 @@ export default function MentorDashboardClient() {
                         <h3>{t("mentorDetail.contact")}</h3>
                         <div className={pv.contactList}>
                           <p>
-                            <i className="fa fa-envelope"></i> {account.email}
+                            <i className="fa fa-envelope"></i> {meEmail}
                           </p>
                           <p>
-                            <i className="fa fa-phone"></i> {pPhone || account.phone}
+                            <i className="fa fa-phone"></i> {pPhone || mePhone}
                           </p>
                           <p>
                             <i className="fa fa-map-marker"></i> {t("mentorDetail.location")}

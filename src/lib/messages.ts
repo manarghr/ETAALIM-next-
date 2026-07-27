@@ -6,6 +6,7 @@
 // row to the two people in the thread.
 import { createClient } from "@/lib/supabase/client";
 import { getMentorById, mentors } from "@/data/mentors";
+import { mentorUidByPublicId } from "@/lib/registeredMentors";
 
 /** An image or file a message carries. Stored as a base64 data URL (kept small).
  *  A future improvement is Supabase Storage instead of inline base64. */
@@ -28,11 +29,45 @@ export interface Message {
 /** Largest attachment we'll keep. */
 export const MAX_ATTACHMENT_BYTES = 3 * 1024 * 1024; // 3 MB
 
-// Resolve a seed mentor (numeric id shown in the UI) to their real account uuid,
-// matching on the email in the seed dataset. Returns null when that mentor has
-// not signed up yet (so there's no real inbox to deliver to).
-async function mentorUuid(seedMentorId: number): Promise<string | null> {
-  const mentor = getMentorById(seedMentorId);
+const DEFAULT_PHOTO = "/images/mentor-default.jpg";
+
+/** Human-readable file size. */
+export function humanSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+/** Read a picked file into an Attachment (base64). Null if it's over the limit. */
+export function readFileAsAttachment(file: File): Promise<Attachment | null> {
+  return new Promise((resolve) => {
+    if (file.size > MAX_ATTACHMENT_BYTES) {
+      resolve(null);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () =>
+      resolve({
+        kind: file.type.startsWith("image/") ? "image" : "file",
+        name: file.name,
+        size: file.size,
+        mime: file.type || "application/octet-stream",
+        dataUrl: String(reader.result),
+      });
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+// Resolve a mentor's numeric id (public_id — seed or registered) to their real
+// account uuid. Tries public_id first, then falls back to matching the seed
+// mentor's email (so it works before the public_id migration too). Null = the
+// mentor hasn't signed up (no inbox to deliver to).
+async function mentorUuid(mentorId: number): Promise<string | null> {
+  const byPublic = await mentorUidByPublicId(mentorId);
+  if (byPublic) return byPublic;
+
+  const mentor = getMentorById(mentorId);
   if (!mentor) return null;
   const supabase = createClient();
   const { data } = await supabase
@@ -153,24 +188,35 @@ export async function getStudentInbox(): Promise<StudentThread[]> {
     byMentor.set(r.mentor_id, list);
   }
 
-  // Resolve each mentor uuid back to its seed profile (via the profile email).
+  // Resolve each mentor uuid to a browsable identity. Every messageable mentor
+  // has a `mentors` row (public_id + avatar); names come from `profiles`. Seed
+  // mentors keep their richer seed name/avatar.
   const uuids = [...byMentor.keys()];
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, email")
-    .in("id", uuids);
-  const emailById = new Map((profiles ?? []).map((p) => [p.id, p.email as string]));
+  const [{ data: mentorRows }, { data: profiles }] = await Promise.all([
+    supabase.from("mentors").select("id, public_id, profile_picture").in("id", uuids),
+    supabase.from("profiles").select("id, name, email").in("id", uuids),
+  ]);
+  const mentorById = new Map((mentorRows ?? []).map((m) => [m.id, m]));
+  const profById = new Map((profiles ?? []).map((p) => [p.id, p]));
 
   const threads: StudentThread[] = [];
   for (const [uuid, msgs] of byMentor) {
-    const email = (emailById.get(uuid) ?? "").toLowerCase();
+    const mrow = mentorById.get(uuid);
+    const prof = profById.get(uuid);
+    const email = ((prof?.email as string) ?? "").toLowerCase();
     const seed = mentors.find((mt) => mt.email.toLowerCase() === email);
-    if (!seed) continue; // a mentor we can't map to a browsable profile
+
+    const publicId = (mrow?.public_id as number) ?? seed?.id;
+    if (publicId == null) continue; // can't map to a profile route
+
+    const name = seed?.name ?? (prof?.name as string) ?? "Mentor";
+    const avatar =
+      seed?.profilePicture ?? (mrow?.profile_picture as string) ?? DEFAULT_PHOTO;
     threads.push({
-      mentorSeedId: seed.id,
-      mentorName: seed.name,
-      avatar: seed.profilePicture,
-      initials: initialsOf(seed.name),
+      mentorSeedId: publicId,
+      mentorName: name,
+      avatar,
+      initials: initialsOf(name),
       messages: msgs,
     });
   }

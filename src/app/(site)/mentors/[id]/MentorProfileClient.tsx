@@ -15,6 +15,7 @@ import {
 import MentorMedia from "@/components/MentorMedia";
 import { getPublicMentorProfile, MentorOverrides } from "@/lib/mentorProfile";
 import { effectiveCourses, EffectiveCourse } from "@/lib/catalog";
+import { getMentorRating, MentorRating } from "@/lib/courseReviews";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./page.module.css";
 
@@ -44,6 +45,12 @@ export default function MentorProfileClient({
           .sort((a, b) => b.id - a.id) // newest first
       )
     );
+  }, [seedMentor.id]);
+
+  // Real rating aggregated from reviews of this mentor's courses.
+  const [rating, setRating] = useState<MentorRating>({ avg: 0, count: 0 });
+  useEffect(() => {
+    getMentorRating(seedMentor.id).then(setRating);
   }, [seedMentor.id]);
 
   const skills = trSkills(mentor.skills, locale);
@@ -78,15 +85,31 @@ export default function MentorProfileClient({
               <h1>{displayName}</h1>
               <p className={styles.headerTitle}>{mentorDisplayTitle(mentor.title, locale)}</p>
               <div className={styles.headerRating}>
-                <span className={styles.stars}>
-                  <i className="fa fa-star"></i>
-                  <i className="fa fa-star"></i>
-                  <i className="fa fa-star"></i>
-                  <i className="fa fa-star"></i>
-                  <i className="fa fa-star-half-o"></i>
-                </span>
-                4.5 · 128 {t("mentorDetail.reviews")} · {mentor.experience}{" "}
-                {t("mentorDetail.yearsExperience")}
+                {rating.count > 0 ? (
+                  <>
+                    <span className={styles.stars}>
+                      {[0, 1, 2, 3, 4].map((i) => (
+                        <i
+                          key={i}
+                          className={`fa ${
+                            rating.avg >= i + 1
+                              ? "fa-star"
+                              : rating.avg >= i + 0.5
+                              ? "fa-star-half-o"
+                              : "fa-star-o"
+                          }`}
+                        ></i>
+                      ))}
+                    </span>
+                    {rating.avg.toFixed(1)} · {rating.count} {t("mentorDetail.reviews")} ·{" "}
+                    {mentor.experience} {t("mentorDetail.yearsExperience")}
+                  </>
+                ) : (
+                  <>
+                    {t("mentorDetail.newMentor")} · {mentor.experience}{" "}
+                    {t("mentorDetail.yearsExperience")}
+                  </>
+                )}
               </div>
               <button
                 type="button"
@@ -106,6 +129,25 @@ export default function MentorProfileClient({
                 <i className={`fa ${following ? "fa-check" : "fa-plus"}`}></i>{" "}
                 {following ? t("mentorDetail.following") : t("mentorDetail.follow")}
               </button>
+              <Link
+                href={`/dashboard?chat=${mentor.id}`}
+                style={{
+                  marginTop: 12,
+                  marginInlineStart: 10,
+                  padding: "9px 20px",
+                  borderRadius: 999,
+                  border: "1px solid var(--primary, #534ab7)",
+                  background: "#fff",
+                  color: "var(--primary, #534ab7)",
+                  fontWeight: 700,
+                  fontSize: 14,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <i className="fa fa-comment"></i> {t("mentorDetail.message")}
+              </Link>
             </div>
           </div>
         </div>

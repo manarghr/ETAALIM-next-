@@ -3,11 +3,13 @@
 // account uuid). Threads are grouped by student and each student's display name
 // is joined from `profiles`. RLS lets a mentor read/insert only their own rows.
 import { createClient } from "@/lib/supabase/client";
+import { Attachment } from "@/lib/messages";
 
 export interface InboxMessage {
   id: string;
   from: "student" | "mentor";
   text: string;
+  attachment?: Attachment;
   date: string; // ISO
 }
 
@@ -34,7 +36,7 @@ export async function getInbox(): Promise<InboxThread[]> {
 
   const { data: rows } = await supabase
     .from("messages")
-    .select("id, student_id, sender, text, created_at")
+    .select("id, student_id, sender, text, attachment, created_at")
     .eq("mentor_id", user.id)
     .order("id", { ascending: true });
 
@@ -48,6 +50,7 @@ export async function getInbox(): Promise<InboxThread[]> {
       id: String(r.id),
       from: r.sender === "mentor" ? "mentor" : "student",
       text: r.text ?? "",
+      attachment: (r.attachment as Attachment) ?? undefined,
       date: r.created_at as string,
     });
     byStudent.set(r.student_id, list);
@@ -80,10 +83,12 @@ export async function getInbox(): Promise<InboxThread[]> {
   return threads;
 }
 
-// Mentor replies to a student. Returns the refreshed inbox.
+// Mentor replies to a student (optionally with an attachment). Returns the
+// refreshed inbox.
 export async function replyToThread(
   studentId: string,
-  text: string
+  text: string,
+  attachment?: Attachment
 ): Promise<InboxThread[]> {
   const supabase = createClient();
   const {
@@ -96,7 +101,7 @@ export async function replyToThread(
     mentor_id: user.id,
     sender: "mentor",
     text,
-    attachment: null,
+    attachment: attachment ?? null,
   });
   if (error) console.error("replyToThread error:", error.message);
 

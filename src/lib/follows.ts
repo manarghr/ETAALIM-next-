@@ -1,6 +1,7 @@
 // Followed mentors, backed by the Supabase `follows` table (RLS per user).
 import { createClient } from "@/lib/supabase/client";
 import { getMentorById } from "@/data/mentors";
+import { mentorUidByPublicId } from "@/lib/registeredMentors";
 
 // Ids of every mentor the current user follows.
 export async function getFollowedMentorIds(): Promise<number[]> {
@@ -36,18 +37,20 @@ export async function toggleFollow(
     return false;
   }
 
-  // Resolve the mentor's real account uuid (by the seed profile's email) so the
-  // mentor can see this follow in their notifications.
-  const mentor = getMentorById(mentorId);
-  let mentorUid: string | null = null;
-  if (mentor) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("email", mentor.email)
-      .eq("role", "mentor")
-      .maybeSingle();
-    mentorUid = (data?.id as string) ?? null;
+  // Resolve the mentor's real account uuid so they can see this follow in their
+  // notifications — by public_id first, then the seed email as a fallback.
+  let mentorUid: string | null = await mentorUidByPublicId(mentorId);
+  if (!mentorUid) {
+    const mentor = getMentorById(mentorId);
+    if (mentor) {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", mentor.email)
+        .eq("role", "mentor")
+        .maybeSingle();
+      mentorUid = (data?.id as string) ?? null;
+    }
   }
 
   await supabase

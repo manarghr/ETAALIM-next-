@@ -73,6 +73,68 @@ export async function getEnrollmentCounts(): Promise<Record<number, number>> {
   return counts;
 }
 
+/** One real payment the mentor earned (a student enrolling in their course). */
+export interface EarningTx {
+  id: string;
+  subject: string;
+  student: string;
+  amount: number; // DZD (the price for the mode the student chose)
+  date: string; // ISO
+}
+
+// Real earnings: every enrollment in the mentor's courses × the price of the
+// mode the student picked. RLS scopes the enrollments to the mentor's courses.
+export async function getMentorEarnings(): Promise<EarningTx[]> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return [];
+
+  const [{ data: enr }, { data: courses }] = await Promise.all([
+    supabase
+      .from("enrollments")
+      .select("id, user_id, course_id, mode, created_at")
+      .order("created_at", { ascending: false }),
+    supabase
+      .from("courses")
+      .select("id, subject, price, price_group, price_individual")
+      .eq("owner_id", user.id),
+  ]);
+  if (!enr || enr.length === 0) return [];
+
+  const courseById = new Map(
+    (courses ?? []).map((c) => [c.id as number, c])
+  );
+  const ids = [...new Set(enr.map((e) => e.user_id as string))];
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("id, name")
+    .in("id", ids);
+  const nameById = new Map((profiles ?? []).map((p) => [p.id, p.name as string]));
+
+  const txs: EarningTx[] = [];
+  for (const e of enr) {
+    const c = courseById.get(e.course_id as number);
+    if (!c) continue; // not one of this mentor's courses
+    const mode = e.mode as string;
+    const amount =
+      mode === "group"
+        ? (c.price_group as number)
+        : mode === "individual"
+        ? (c.price_individual as number)
+        : (c.price as number);
+    txs.push({
+      id: String(e.id),
+      subject: c.subject as string,
+      student: nameById.get(e.user_id as string) ?? "Student",
+      amount: amount ?? 0,
+      date: e.created_at as string,
+    });
+  }
+  return txs;
+}
+
 // When the mentor last opened their Students tab (server-side, per profile) —
 // drives the "new enrollments" badge that clears on open.
 export async function getStudentsSeenAt(): Promise<string> {

@@ -1,7 +1,7 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { getMentorById } from "@/data/mentors";
 import MentorProfileClient from "./MentorProfileClient";
+import RegisteredMentorProfile from "./RegisteredMentorProfile";
 
 export async function generateMetadata({
   params,
@@ -21,9 +21,7 @@ export default async function MentorProfilePage({
   const { id } = await params;
   const mentor = getMentorById(parseInt(id, 10));
 
-  if (!mentor) {
-    redirect("/mentors");
-  }
-
-  return <MentorProfileClient mentor={mentor} />;
+  // Seed mentor → render directly; otherwise resolve a registered mentor.
+  if (mentor) return <MentorProfileClient mentor={mentor} />;
+  return <RegisteredMentorProfile publicId={parseInt(id, 10)} />;
 }

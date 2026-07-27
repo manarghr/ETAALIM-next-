@@ -382,10 +382,13 @@ export function getMentorMajors(): string[] {
   return Array.from(new Set(mentors.map((m) => m.major))).sort();
 }
 
-export function filterMentors(opts: { search?: string; major?: string }): Mentor[] {
+export function filterMentors(
+  opts: { search?: string; major?: string },
+  list: Mentor[] = mentors
+): Mentor[] {
   const search = (opts.search ?? "").trim().toLowerCase();
   const major = opts.major ?? "";
-  return mentors.filter((m) => {
+  return list.filter((m) => {
     if (major !== "" && major !== "All" && m.major !== major) return false;
     if (
       search !== "" &&
