@@ -73,6 +73,36 @@ export async function getEnrollmentCounts(): Promise<Record<number, number>> {
   return counts;
 }
 
+// When the mentor last opened their Students tab (server-side, per profile) —
+// drives the "new enrollments" badge that clears on open.
+export async function getStudentsSeenAt(): Promise<string> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return "";
+  const { data } = await supabase
+    .from("profiles")
+    .select("students_seen_at")
+    .eq("id", user.id)
+    .maybeSingle();
+  return (data?.students_seen_at as string) ?? "";
+}
+
+// Mark students seen up to `upTo` — the newest enrollment's server timestamp.
+export async function markStudentsSeen(upTo: string): Promise<void> {
+  if (!upTo) return;
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+  await supabase
+    .from("profiles")
+    .update({ students_seen_at: upTo })
+    .eq("id", user.id);
+}
+
 // Live updates: fire `onChange` whenever an enrollment the mentor can see
 // changes (RLS scopes realtime to their own courses' enrollments).
 export function subscribeEnrollments(onChange: () => void): () => void {

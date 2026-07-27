@@ -130,8 +130,10 @@ export async function getNotifSeenAt(): Promise<string> {
   return (data?.notif_seen_at as string) ?? "";
 }
 
-// Mark all notifications seen as of now.
-export async function markNotifsSeen(): Promise<void> {
+// Mark notifications seen up to `upTo` — the newest notification's own server
+// timestamp, so the comparison stays clock-skew-proof.
+export async function markNotifsSeen(upTo: string): Promise<void> {
+  if (!upTo) return;
   const supabase = createClient();
   const {
     data: { user },
@@ -139,7 +141,7 @@ export async function markNotifsSeen(): Promise<void> {
   if (!user) return;
   await supabase
     .from("profiles")
-    .update({ notif_seen_at: new Date().toISOString() })
+    .update({ notif_seen_at: upTo })
     .eq("id", user.id);
 }
 

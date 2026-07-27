@@ -27,10 +27,11 @@ import { getFollowedMentorIds, toggleFollow } from "@/lib/follows";
 import { getMyEnrollments, Enrollment } from "@/lib/enrollment";
 import { getReceipts, Receipt } from "@/lib/receipts";
 import { getBalance, topUp, getTransactions, WalletTx } from "@/lib/wallet";
-import { getFavoriteIds } from "@/lib/favorites";
+import { getFavoriteIds, getFavorites } from "@/lib/favorites";
+import { getSeenAt, markSeen } from "@/lib/seen";
 import { getProfile, Profile } from "@/lib/profile";
 import { getApprovals, createApproval, setApprovalStatus, Approval } from "@/lib/approvals";
-import { sessionDateFor, countdownOf, isSoon, DISCOUNTS } from "@/lib/schedule";
+import { sessionDateFor, countdownOf } from "@/lib/schedule";
 import {
   getStudentInbox,
   getThread,
@@ -44,6 +45,13 @@ import styles from "./dashboard.module.css";
 // Reuse the mentor dashboard's inbox styling so both panels look identical.
 import ibx from "../mentor-dashboard/mentor.module.css";
 import { getLastRead, markThreadRead } from "@/lib/threadReads";
+import {
+  getStudentNotifications,
+  getStudentNotifSeenAt,
+  markStudentNotifsSeen,
+  subscribeStudentNotifications,
+  StudentNotification,
+} from "@/lib/studentNotifications";
 
 type Mentor = NonNullable<ReturnType<typeof getMentorById>>;
 type Section =
@@ -95,6 +103,9 @@ export default function DashboardClient() {
   const [activeMentorId, setActiveMentorId] = useState<number | null>(null);
   const [activeMessages, setActiveMessages] = useState<Message[]>([]);
   const [replyText, setReplyText] = useState("");
+  // Real notifications feed (mentor replies / purchases / top-ups) + last seen.
+  const [studentNotifs, setStudentNotifs] = useState<StudentNotification[]>([]);
+  const [notifSeen, setNotifSeen] = useState<string>("");
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [balance, setBalance] = useState<number | null>(null);
   const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
@@ -104,11 +115,25 @@ export default function DashboardClient() {
     getMyEnrollments().then(setEnrollments);
   }, [section]);
 
-  // Load the user's real favorites (refreshes when a star is toggled).
+  // Load the user's real favorites (refreshes when a star is toggled). We keep
+  // both the ids (for the Saved list) and the dated rows (for the "new" badge).
   const [favoriteIds, setFavoriteIds] = useState<number[]>([]);
+  const [favoritesData, setFavoritesData] = useState<
+    { courseId: number; date: string }[]
+  >([]);
   useEffect(() => {
     getFavoriteIds().then(setFavoriteIds);
+    getFavorites().then(setFavoritesData);
   }, [section, tick]);
+
+  // "New since last opened" markers for the My Courses & Saved tabs.
+  const [coursesSeen, setCoursesSeen] = useState<string>("");
+  const [savedSeen, setSavedSeen] = useState<string>("");
+  useEffect(() => {
+    if (!mounted) return;
+    getSeenAt("courses_seen_at").then(setCoursesSeen);
+    getSeenAt("saved_seen_at").then(setSavedSeen);
+  }, [mounted]);
 
   // Load the real wallet history (top-ups + purchases).
   const [transactions, setTransactions] = useState<WalletTx[]>([]);
@@ -180,6 +205,47 @@ export default function DashboardClient() {
     });
     return unsubscribe;
   }, [mounted]);
+
+  // Load the real notifications feed and keep it live.
+  useEffect(() => {
+    if (!mounted) return;
+    getStudentNotifications().then(setStudentNotifs);
+    getStudentNotifSeenAt().then(setNotifSeen);
+    const unsubscribe = subscribeStudentNotifications(() => {
+      getStudentNotifications().then(setStudentNotifs);
+    });
+    return unsubscribe;
+  }, [mounted]);
+
+  // Viewing the Notifications tab marks everything seen (newest server time).
+  useEffect(() => {
+    if (section !== "notifications" || studentNotifs.length === 0) return;
+    const newest = studentNotifs[0].date;
+    markStudentNotifsSeen(newest);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotifSeen(newest);
+  }, [section, studentNotifs]);
+
+  const notifUnread = studentNotifs.filter((n) => n.date > notifSeen).length;
+
+  // Opening My Courses / Saved marks their new items seen (newest server time).
+  useEffect(() => {
+    if (section !== "courses" || enrollments.length === 0) return;
+    const newest = enrollments[0].date;
+    markSeen("courses_seen_at", newest);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCoursesSeen(newest);
+  }, [section, enrollments]);
+  useEffect(() => {
+    if (section !== "saved" || favoritesData.length === 0) return;
+    const newest = favoritesData[0].date;
+    markSeen("saved_seen_at", newest);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSavedSeen(newest);
+  }, [section, favoritesData]);
+
+  const coursesUnread = enrollments.filter((e) => e.date > coursesSeen).length;
+  const savedUnread = favoritesData.filter((f) => f.date > savedSeen).length;
 
   // The open conversation: load its messages and keep them live.
   useEffect(() => {
@@ -270,9 +336,17 @@ export default function DashboardClient() {
       )
     : gradeLabel(student);
 
+  // Dedupe by course: a student can now enroll in the same course in several
+  // modes (recorded + private…), but it's still one course in their list.
+  const seenCourseIds = new Set<number>();
   const enrolledCourses = enrollments
     .map((e) => ({ e, course: getCourseById(e.courseId) }))
-    .filter((x): x is { e: Enrollment; course: Course } => Boolean(x.course));
+    .filter((x): x is { e: Enrollment; course: Course } => Boolean(x.course))
+    .filter((x) => {
+      if (seenCourseIds.has(x.course.id)) return false;
+      seenCourseIds.add(x.course.id);
+      return true;
+    });
 
   const sessions = enrolledCourses
     .map((x, i) => ({ ...x, date: sessionDateFor(i, base) }))
@@ -292,42 +366,6 @@ export default function DashboardClient() {
     .filter((c): c is Course => Boolean(c));
 
   const pendingConsent = approvals.filter((a) => a.status === "pending");
-
-  const notifications = [
-    ...sessions
-      .filter((s) => isSoon(s.date, base))
-      .map((s) => ({
-        id: "s" + s.course.id,
-        icon: "fa-clock-o",
-        accent: "#534ab7",
-        title: t("dash.notifStarts", {
-          subject: tr(s.course.subject, locale),
-          when: cd(s.date),
-        }),
-        text: t("dash.notifWith", { mentor: mentorName(s.course.mentorId) }),
-        tag: "",
-      })),
-    ...pendingConsent.map((c) => ({
-      id: "c" + c.id,
-      icon: "fa-shield",
-      accent: "#e0894a",
-      title: t("dash.notifConsentTitle"),
-      text: t("dash.notifConsentText", {
-        course: tr(c.courseName, locale),
-        amount: money(c.amount),
-        email: c.parentEmail ?? "",
-      }),
-      tag: "",
-    })),
-    ...DISCOUNTS.map((d) => ({
-      id: "d" + d.id,
-      icon: "fa-tag",
-      accent: d.accent,
-      title: t(d.titleKey),
-      text: t(d.textKey),
-      tag: d.tag,
-    })),
-  ];
 
   const nextSession = sessions[0];
 
@@ -462,11 +500,11 @@ export default function DashboardClient() {
               {NAV.map((item) => {
                 const count =
                   item.key === "notifications"
-                    ? notifications.length
+                    ? notifUnread
                     : item.key === "courses"
-                    ? enrolledCourses.length
+                    ? coursesUnread
                     : item.key === "saved"
-                    ? savedCourses.length
+                    ? savedUnread
                     : item.key === "messages"
                     ? msgUnread
                     : 0;
@@ -525,7 +563,7 @@ export default function DashboardClient() {
                     <span className={styles.statIcon} style={{ color: "#534ab7" }}>
                       <i className="fa fa-bell"></i>
                     </span>
-                    <span className={styles.statValue}>{notifications.length}</span>
+                    <span className={styles.statValue}>{studentNotifs.length}</span>
                     <span className={styles.statLabel}>
                       {t("dash.statNotifications")}
                     </span>
@@ -1080,33 +1118,60 @@ export default function DashboardClient() {
                   <h1>{t("dash.navNotifications")}</h1>
                   <p>{t("dash.notificationsSub")}</p>
                 </div>
-                <div className={styles.notifList}>
-                  {notifications.map((n) => (
-                    <div key={n.id} className={styles.notifItem}>
-                      <span
-                        className={styles.notifIcon}
-                        style={{ background: `${n.accent}1a`, color: n.accent }}
-                      >
-                        <i className={`fa ${n.icon}`}></i>
-                      </span>
-                      <div className={styles.notifBody}>
-                        <b>{n.title}</b>
-                        <span>{n.text}</span>
-                      </div>
-                      {n.tag && (
-                        // dir="ltr" isolates the tag: without it an RTL page
-                        // renders "−20%" as "20%−".
-                        <span
-                          dir="ltr"
-                          className={styles.notifTag}
-                          style={{ background: `${n.accent}1a`, color: n.accent }}
-                        >
-                          {n.tag}
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                {studentNotifs.length === 0 ? (
+                  <div className={styles.empty}>
+                    <i className="fa fa-bell-o"></i>
+                    <p>{t("dash.notifEmpty")}</p>
+                  </div>
+                ) : (
+                  <div className={styles.notifList}>
+                    {studentNotifs.map((n) => {
+                      const cfg =
+                        n.type === "reply"
+                          ? {
+                              icon: "fa-comment",
+                              accent: "#534ab7",
+                              title: t("dash.notifReply", {
+                                mentor: n.actorName ?? "",
+                              }),
+                            }
+                          : n.type === "enroll"
+                          ? {
+                              icon: "fa-graduation-cap",
+                              accent: "#0e9f9c",
+                              title: t("dash.notifEnrolled", {
+                                course: n.detail ? tr(n.detail, locale) : "",
+                              }),
+                            }
+                          : {
+                              icon: "fa-money",
+                              accent: "#16a34a",
+                              title: t("dash.notifTopup", {
+                                amount: money(n.amount ?? 0),
+                              }),
+                            };
+                      return (
+                        <div key={n.id} className={styles.notifItem}>
+                          <span
+                            className={styles.notifIcon}
+                            style={{ background: `${cfg.accent}1a`, color: cfg.accent }}
+                          >
+                            <i className={`fa ${cfg.icon}`}></i>
+                          </span>
+                          <div className={styles.notifBody}>
+                            <b>{cfg.title}</b>
+                            <span>
+                              {new Date(n.date).toLocaleString(
+                                locale === "ar" ? "ar-DZ-u-nu-latn" : locale,
+                                { dateStyle: "medium", timeStyle: "short" }
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </section>
             )}
           </main>

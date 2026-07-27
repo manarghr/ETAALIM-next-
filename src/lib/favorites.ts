@@ -43,4 +43,19 @@ export async function getFavoriteIds(): Promise<number[]> {
   const { data } = await supabase.from("favorites").select("course_id");
   return (data ?? []).map((r) => r.course_id as number);
 }
+
+// favorites with when they were added (newest first) — for the "new" badge.
+export async function getFavorites(): Promise<
+  { courseId: number; date: string }[]
+> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("favorites")
+    .select("course_id, created_at")
+    .order("created_at", { ascending: false });
+  return (data ?? []).map((r) => ({
+    courseId: r.course_id as number,
+    date: r.created_at as string,
+  }));
+}
  

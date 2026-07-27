@@ -3,6 +3,8 @@
 import {
   getEnrollmentCounts,
   getMentorRoster,
+  getStudentsSeenAt,
+  markStudentsSeen,
   subscribeEnrollments,
   RosterEntry,
 } from "@/lib/mentorRoster";
@@ -118,6 +120,8 @@ export default function MentorDashboardClient() {
   // Activity feed (messages / enrollments / follows) + when it was last seen.
   const [notifs, setNotifs] = useState<MentorNotification[]>([]);
   const [notifSeen, setNotifSeen] = useState<string>("");
+  // When the Students tab was last opened — drives the "new enrollments" badge.
+  const [studentsSeen, setStudentsSeen] = useState<string>("");
   const [counts, setCounts] = useState<Record<number, number>>({}); 
   
   // Messages — inbox comes from Supabase (real student threads), kept live.
@@ -193,12 +197,24 @@ export default function MentorDashboardClient() {
     getMentorCourses().then(setCourses);
     getEnrollmentCounts().then(setCounts);
     getMentorRoster().then(setRealRoster);
+    getStudentsSeenAt().then(setStudentsSeen);
     const unsubscribe = subscribeEnrollments(() => {
       getEnrollmentCounts().then(setCounts);
       getMentorRoster().then(setRealRoster);
     });
     return unsubscribe;
   }, [mounted]);
+
+  // Viewing the Students tab marks new enrollments seen (newest server time).
+  useEffect(() => {
+    if (section !== "students" || realRoster.length === 0) return;
+    const newest = realRoster[0].date;
+    markStudentsSeen(newest);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setStudentsSeen(newest);
+  }, [section, realRoster]);
+
+  const studentsUnread = realRoster.filter((r) => r.date > studentsSeen).length;
 
   // Load the activity feed and keep it live.
   useEffect(() => {
@@ -211,13 +227,15 @@ export default function MentorDashboardClient() {
     return unsubscribe;
   }, [mounted]);
 
-  // Opening the Notifications tab marks everything seen (server-side).
+  // Viewing the Notifications tab marks everything up to the newest item seen
+  // (using its server timestamp, so clock skew can't leave the badge stuck).
   useEffect(() => {
-    if (section !== "notifications") return;
-    markNotifsSeen();
+    if (section !== "notifications" || notifs.length === 0) return;
+    const newest = notifs[0].date;
+    markNotifsSeen(newest);
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setNotifSeen(new Date().toISOString());
-  }, [section]);
+    setNotifSeen(newest);
+  }, [section, notifs]);
 
   const notifUnread = notifs.filter((n) => n.date > notifSeen).length;
 
@@ -429,7 +447,7 @@ export default function MentorDashboardClient() {
                   item.key === "messages"
                     ? unread
                     : item.key === "students"
-                    ? realRoster.length
+                    ? studentsUnread
                     : item.key === "notifications"
                     ? notifUnread
                     : 0;
@@ -847,7 +865,12 @@ export default function MentorDashboardClient() {
                           </span>
                           <div className={m.notifBody}>
                             <span>{text}</span>
-                            <time>{formatDate(n.date, locale)}</time>
+                            <time>
+                              {new Date(n.date).toLocaleString(
+                                locale === "ar" ? "ar-DZ-u-nu-latn" : locale,
+                                { dateStyle: "medium", timeStyle: "short" }
+                              )}
+                            </time>
                           </div>
                         </div>
                       );
