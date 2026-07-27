@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  getEnrollmentCounts,
+  getMentorRoster,
+  subscribeEnrollments,
+  RosterEntry,
+} from "@/lib/mentorRoster";
 import { useEffect, useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { getSession } from "@/lib/auth";
@@ -31,6 +37,14 @@ import {
 import { Certificate } from "@/data/mentors";
 import MentorMedia from "@/components/MentorMedia";
 import { getMyMentorProfile, saveMyMentorProfile } from "@/lib/mentorProfile";
+import { getLastRead, markThreadRead } from "@/lib/threadReads";
+import {
+  getMentorNotifications,
+  getNotifSeenAt,
+  markNotifsSeen,
+  subscribeNotifications,
+  MentorNotification,
+} from "@/lib/mentorNotifications";
 import shared from "../dashboard/dashboard.module.css";
 import m from "./mentor.module.css";
 // Reuse the real student-facing profile styles so the preview is pixel-identical.
@@ -43,6 +57,7 @@ type Section =
   | "schedule"
   | "earnings"
   | "messages"
+  | "notifications"
   | "profile";
 
 const NAV: { key: Section; labelKey: string; icon: string }[] = [
@@ -52,7 +67,15 @@ const NAV: { key: Section; labelKey: string; icon: string }[] = [
   { key: "schedule", labelKey: "mentorDash.navSchedule", icon: "fa-calendar" },
   { key: "earnings", labelKey: "mentorDash.navEarnings", icon: "fa-money" },
   { key: "messages", labelKey: "mentorDash.navMessages", icon: "fa-comments" },
+  { key: "notifications", labelKey: "mentorDash.navNotifications", icon: "fa-bell" },
   { key: "profile", labelKey: "mentorDash.navProfile", icon: "fa-id-card" },
+];
+
+// The three ways a student can enroll — the Students tab groups by these.
+const MODE_GROUPS: { mode: string; labelKey: string; icon: string }[] = [
+  { mode: "recorded", labelKey: "mentorDash.grpRecorded", icon: "fa-play-circle" },
+  { mode: "group", labelKey: "mentorDash.grpGroup", icon: "fa-users" },
+  { mode: "individual", labelKey: "mentorDash.grpIndividual", icon: "fa-user" },
 ];
 
 const EMPTY_FORM: CourseInput = {
@@ -90,7 +113,13 @@ export default function MentorDashboardClient() {
 
   // The mentor's courses, loaded from Supabase (their owned catalog rows).
   const [courses, setCourses] = useState<MentorCourse[]>([]);
-
+  // Real enrolled students (for the Students tab, grouped by session type).
+  const [realRoster, setRealRoster] = useState<RosterEntry[]>([]);
+  // Activity feed (messages / enrollments / follows) + when it was last seen.
+  const [notifs, setNotifs] = useState<MentorNotification[]>([]);
+  const [notifSeen, setNotifSeen] = useState<string>("");
+  const [counts, setCounts] = useState<Record<number, number>>({}); 
+  
   // Messages — inbox comes from Supabase (real student threads), kept live.
   const [inbox, setInbox] = useState<InboxThread[]>([]);
   const [activeThread, setActiveThread] = useState<string | null>(null);
@@ -157,11 +186,40 @@ export default function MentorDashboardClient() {
   }, [router]);
   /* eslint-enable react-hooks/set-state-in-effect */
 
-  // Load the mentor's courses from Supabase.
+  // Load the mentor's courses and their real enrollment counts from Supabase,
+  // and keep the counts live as students enroll.
   useEffect(() => {
     if (!mounted) return;
     getMentorCourses().then(setCourses);
+    getEnrollmentCounts().then(setCounts);
+    getMentorRoster().then(setRealRoster);
+    const unsubscribe = subscribeEnrollments(() => {
+      getEnrollmentCounts().then(setCounts);
+      getMentorRoster().then(setRealRoster);
+    });
+    return unsubscribe;
   }, [mounted]);
+
+  // Load the activity feed and keep it live.
+  useEffect(() => {
+    if (!mounted) return;
+    getMentorNotifications().then(setNotifs);
+    getNotifSeenAt().then(setNotifSeen);
+    const unsubscribe = subscribeNotifications(() => {
+      getMentorNotifications().then(setNotifs);
+    });
+    return unsubscribe;
+  }, [mounted]);
+
+  // Opening the Notifications tab marks everything seen (server-side).
+  useEffect(() => {
+    if (section !== "notifications") return;
+    markNotifsSeen();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNotifSeen(new Date().toISOString());
+  }, [section]);
+
+  const notifUnread = notifs.filter((n) => n.date > notifSeen).length;
 
   // Load the real student inbox from Supabase and keep it live: refetch whenever
   // a student sends a new message.
@@ -195,10 +253,15 @@ export default function MentorDashboardClient() {
     .map((c, i) => ({ course: c, date: sessionDateFor(i, base) }))
     .sort((a, b) => a.date.getTime() - b.date.getTime());
 
-  const unread = inbox.filter((tr2) => {
-    const last = tr2.messages[tr2.messages.length - 1];
-    return last && last.from === "student";
-  }).length;
+  // A thread is unread when its newest message is from the student, it isn't the
+  // one currently open, and it arrived after the mentor last opened it.
+  const isUnread = (th: InboxThread) => {
+    const last = th.messages[th.messages.length - 1];
+    if (!last || last.from !== "student") return false;
+    if (activeThread === th.studentId) return false; // open = read
+    return last.date > getLastRead(`m:${th.studentId}`);
+  };
+  const unread = inbox.filter(isUnread).length;
 
   const earned = mounted ? totalEarnings() : 0;
   const thisMonth = mounted ? monthEarnings() : 0;
@@ -365,10 +428,10 @@ export default function MentorDashboardClient() {
                 const count =
                   item.key === "messages"
                     ? unread
-                    : item.key === "courses"
-                    ? courses.length
                     : item.key === "students"
-                    ? roster.length
+                    ? realRoster.length
+                    : item.key === "notifications"
+                    ? notifUnread
                     : 0;
                 return (
                   <button
@@ -510,7 +573,7 @@ export default function MentorDashboardClient() {
                             {c.level ? ` · ${tr(c.level, locale)}` : ""}
                           </span>
                           <div className={m.courseStats}>
-                            <span><i className="fa fa-users"></i> {c.students} {t("mentorDash.studentsWord")}</span>
+                            <span><i className="fa fa-users"></i> {counts[c.id] ?? c.students} {t("mentorDash.studentsWord")}</span>
                             <span><i className="fa fa-money"></i> {money(c.price)}</span>
                             {c.date && (
                               <span><i className="fa fa-calendar"></i> {formatDate(c.date, locale)}</span>
@@ -539,26 +602,42 @@ export default function MentorDashboardClient() {
                   <h1>{t("mentorDash.studentsTitle")}</h1>
                   <p>{t("mentorDash.studentsSub")}</p>
                 </div>
-                {roster.length === 0 ? (
+                {realRoster.length === 0 ? (
                   <p className={shared.muted}>{t("mentorDash.noStudents")}</p>
                 ) : (
-                  <div className={m.studentList}>
-                    {roster.map(({ student, course }) => (
-                      <div key={`${course.id}-${student.id}`} className={m.studentRow}>
-                        <span className={m.studentAvatar}>{student.initials}</span>
-                        <div className={m.studentInfo}>
-                          <b>{student.name}</b>
-                          <span>{courseTitle(course)}</span>
+                  MODE_GROUPS.map((g) => {
+                    const list = realRoster.filter((r) => r.mode === g.mode);
+                    return (
+                      <div key={g.mode} className={m.studentGroup}>
+                        <div className={m.groupHead}>
+                          <i className={`fa ${g.icon}`}></i>
+                          <h3>{t(g.labelKey)}</h3>
+                          <span className={m.groupCount}>{list.length}</span>
                         </div>
-                        <div className={m.studentRight}>
-                          <div className={m.miniTrack}>
-                            <span style={{ width: `${student.progress}%` }} />
+                        {list.length === 0 ? (
+                          <p className={m.groupEmpty}>{t("mentorDash.groupEmpty")}</p>
+                        ) : (
+                          <div className={m.studentList}>
+                            {list.map((r, i) => {
+                              const course = courses.find((c) => c.id === r.courseId);
+                              return (
+                                <div
+                                  key={`${r.courseId}-${r.studentId}-${i}`}
+                                  className={m.studentRow}
+                                >
+                                  <span className={m.studentAvatar}>{r.initials}</span>
+                                  <div className={m.studentInfo}>
+                                    <b>{r.name}</b>
+                                    <span>{course ? courseTitle(course) : ""}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
                           </div>
-                          <span className={m.progressChip}>{student.progress}%</span>
-                        </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })
                 )}
               </section>
             )}
@@ -662,14 +741,18 @@ export default function MentorDashboardClient() {
                             className={`${m.threadItem} ${
                               activeThread === th.studentId ? m.threadActive : ""
                             }`}
-                            onClick={() => setActiveThread(th.studentId)}
+                            onClick={() => {
+                              markThreadRead(`m:${th.studentId}`, last?.date ?? "");
+                              setActiveThread(th.studentId);
+                              reload();
+                            }}
                           >
                             <span className={m.studentAvatar}>{th.initials}</span>
                             <div className={m.threadInfo}>
                               <b>{th.studentName}</b>
                               <span>{inboxText(last)}</span>
                             </div>
-                            {last.from === "student" && <span className={m.dot} />}
+                            {isUnread(th) && <span className={m.dot} />}
                           </button>
                         );
                       })}
@@ -684,6 +767,14 @@ export default function MentorDashboardClient() {
                       ) : (
                         <>
                           <div className={m.threadHead}>
+                            <button
+                              type="button"
+                              className={m.threadBack}
+                              onClick={() => setActiveThread(null)}
+                              aria-label={t("mentorDash.back")}
+                            >
+                              <i className="fa fa-arrow-left"></i>
+                            </button>
                             <span className={m.studentAvatar}>{thread.initials}</span>
                             <b>{thread.studentName}</b>
                           </div>
@@ -714,6 +805,53 @@ export default function MentorDashboardClient() {
                         </>
                       )}
                     </div>
+                  </div>
+                )}
+              </section>
+            )}
+
+            {/* -------- Notifications -------- */}
+            {section === "notifications" && (
+              <section>
+                <div className={shared.panelHead}>
+                  <h1>{t("mentorDash.notifTitle")}</h1>
+                  <p>{t("mentorDash.notifSub")}</p>
+                </div>
+                {notifs.length === 0 ? (
+                  <p className={shared.muted}>{t("mentorDash.notifEmpty")}</p>
+                ) : (
+                  <div className={m.notifList}>
+                    {notifs.map((n) => {
+                      const icon =
+                        n.type === "message"
+                          ? "fa-comment"
+                          : n.type === "enroll"
+                          ? "fa-graduation-cap"
+                          : "fa-user-plus";
+                      const text =
+                        n.type === "message"
+                          ? t("mentorDash.notifMessage", { name: n.actorName })
+                          : n.type === "enroll"
+                          ? t("mentorDash.notifEnroll", {
+                              name: n.actorName,
+                              course: n.detail ? tr(n.detail, locale) : "",
+                            })
+                          : t("mentorDash.notifFollow", { name: n.actorName });
+                      return (
+                        <div
+                          key={n.id}
+                          className={`${m.notifRow} ${m[`notif_${n.type}`]}`}
+                        >
+                          <span className={m.notifIcon}>
+                            <i className={`fa ${icon}`}></i>
+                          </span>
+                          <div className={m.notifBody}>
+                            <span>{text}</span>
+                            <time>{formatDate(n.date, locale)}</time>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </section>

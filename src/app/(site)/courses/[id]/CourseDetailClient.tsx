@@ -13,7 +13,7 @@ import {
 import { getLessons } from "@/data/lessons";
 import { getMentorById, getOtherMentorsInMajor } from "@/data/mentors";
 import { tr, mentorDisplayName } from "@/data/localized";
-import { isEnrolled } from "@/lib/enrollment";
+import { getMyEnrollments } from "@/lib/enrollment";
 import { categoryAccent } from "@/lib/theme";
 import { effectiveCourse, EffectiveCourse } from "@/lib/catalog";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -36,11 +36,12 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
   }, [baseCourse.id]);
   const description = "description" in course ? course.description : undefined;
 
-  // Reflect a prior purchase (stored client-side) — the course shows as unlocked.
+  // Reflect a real prior purchase from Supabase — the course shows as unlocked.
   const [enrolled, setEnrolled] = useState(false);
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setEnrolled(isEnrolled(course.id));
+    getMyEnrollments().then((list) =>
+      setEnrolled(list.some((e) => e.courseId === course.id))
+    );
   }, [course.id]);
 
   const mentor = getMentorById(course.mentorId);

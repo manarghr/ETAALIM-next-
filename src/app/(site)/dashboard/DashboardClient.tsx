@@ -43,6 +43,7 @@ import {
 import styles from "./dashboard.module.css";
 // Reuse the mentor dashboard's inbox styling so both panels look identical.
 import ibx from "../mentor-dashboard/mentor.module.css";
+import { getLastRead, markThreadRead } from "@/lib/threadReads";
 
 type Mentor = NonNullable<ReturnType<typeof getMentorById>>;
 type Section =
@@ -211,11 +212,15 @@ export default function DashboardClient() {
     getStudentInbox().then(setInbox);
   };
 
-  // Threads whose newest message is from the mentor (awaiting the student).
-  const msgUnread = inbox.filter((th) => {
+  // A thread is unread when its newest message is from the mentor, it isn't the
+  // one currently open, and it arrived after the student last opened it.
+  const isUnread = (th: StudentThread) => {
     const last = th.messages[th.messages.length - 1];
-    return last && last.from === "mentor";
-  }).length;
+    if (!last || last.from !== "mentor") return false;
+    if (activeMentorId === th.mentorSeedId) return false; // open = read
+    return last.date > getLastRead(`s:${th.mentorSeedId}`);
+  };
+  const msgUnread = inbox.filter(isUnread).length;
 
   // "in 10 minutes" / "خلال 10 دقائق" — the phrase lives in the dictionary.
   const cd = (date: Date) => {
@@ -992,14 +997,18 @@ export default function DashboardClient() {
                             className={`${ibx.threadItem} ${
                               activeMentorId === th.mentorSeedId ? ibx.threadActive : ""
                             }`}
-                            onClick={() => setActiveMentorId(th.mentorSeedId)}
+                            onClick={() => {
+                              markThreadRead(`s:${th.mentorSeedId}`, last?.date ?? "");
+                              setActiveMentorId(th.mentorSeedId);
+                              reload();
+                            }}
                           >
                             <span className={ibx.studentAvatar}>{th.initials}</span>
                             <div className={ibx.threadInfo}>
                               <b>{mentorName(th.mentorSeedId) || th.mentorName}</b>
                               <span>{last?.text ?? ""}</span>
                             </div>
-                            {last?.from === "mentor" && <span className={ibx.dot} />}
+                            {isUnread(th) && <span className={ibx.dot} />}
                           </button>
                         );
                       })}
@@ -1014,6 +1023,14 @@ export default function DashboardClient() {
                       ) : (
                         <>
                           <div className={ibx.threadHead}>
+                            <button
+                              type="button"
+                              className={ibx.threadBack}
+                              onClick={() => setActiveMentorId(null)}
+                              aria-label={t("dash.back")}
+                            >
+                              <i className="fa fa-arrow-left"></i>
+                            </button>
                             <span className={ibx.studentAvatar}>
                               {(mentorName(activeMentorId) || "?")
                                 .split(" ")
