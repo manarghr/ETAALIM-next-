@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
+import { isEmailTaken } from "@/lib/signupErrors";
 import { registerMentor } from "@/lib/mentor";
 import { createClient } from "@/lib/supabase/client";
 import { TEACH_YEARS, TeachTier } from "@/data/mentors";
@@ -27,6 +28,8 @@ export default function MentorForm() {
   const router = useRouter();
   const [show, setShow] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  // form-level problem shown as a red banner (email already registered, …)
+  const [formError, setFormError] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [experience, setExperience] = useState(0);
   const [skills, setSkills] = useState<string[]>([]);
@@ -81,6 +84,7 @@ export default function MentorForm() {
     if (!data.get("terms")) next.terms = true;
 
     setErrors(next);
+    setFormError(null);
     if (Object.keys(next).length > 0) return;
 
     // For the demo we onboard the professor straight away (no email review /
@@ -94,34 +98,50 @@ export default function MentorForm() {
     const password = String(data.get("password") ?? "");
 
     // ===== Real Supabase mentor account =====
+    // The full profile rides along as metadata; a DB trigger (handle_new_user)
+    // creates the profiles + mentors rows — so it works even with email
+    // confirmation on (no session yet).
     const supabase = createClient();
-    const { data: auth, error } = await supabase.auth.signUp({ email, password });
-    if (error || !auth.user) {
-      alert(error?.message ?? "Sign-up failed");
+    const { data: auth, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          role: "mentor",
+          name,
+          phone,
+          major: expertise,
+          level,
+          experience,
+          skills: skills.join(", "),
+          title: level ? `${level} · ${expertise}` : expertise,
+          teaching_tier: teachTier || null,
+          teaching_years: teachYears.length ? teachYears : null,
+          profile_picture: photo || "/images/mentor-default.jpg",
+        },
+      },
+    });
+    // One account per email address — a second sign-up on an address that is
+    // already taken (by a password OR a Google account) is refused.
+    if (isEmailTaken(error, auth.user)) {
+      setErrors({ email: true });
+      setFormError(t("auth.emailTaken"));
       return;
     }
-    // profile row with the mentor role
-    await supabase.from("profiles").insert({
-      id: auth.user.id,
-      name,
-      email,
-      phone,
-      role: "mentor",
-    });
-    // mentor-specific details
-    await supabase.from("mentors").insert({
-      id: auth.user.id,
-      major: expertise,
-      level,
-      experience,
-      skills: skills.join(", "),
-      title: level ? `${level} · ${expertise}` : expertise,
-      teaching_tier: teachTier || null,
-      teaching_years: teachYears.length ? teachYears : null,
-      profile_picture: photo || "/images/mentor-default.jpg",
-    });
+    if (error || !auth.user) {
+      setFormError(error?.message ?? "Sign-up failed");
+      return;
+    }
 
-    // TEMP: keep the localStorage mentor account so the mentor dashboard still works.
+    // Email confirmation on → no session yet: ask them to check their inbox.
+    if (!auth.session) {
+      alert(t("auth.checkEmail"));
+      router.push("/login");
+      return;
+    }
+
+    // Confirmation off → keep the localStorage account in sync and go straight in.
     const account = registerMentor({
       name,
       email,
@@ -155,6 +175,15 @@ export default function MentorForm() {
               <h1>{t("mentorForm.title")}</h1>
               <p>{t("mentorForm.subtitle")}</p>
             </div>
+
+            {formError && (
+              <div className={s.alert}>
+                <i className="fa fa-exclamation-circle"></i>
+                <span>
+                  {formError} <Link href="/login">{t("auth.switchLogin")}</Link>
+                </span>
+              </div>
+            )}
 
             <form className={s.form} onSubmit={handleSubmit} noValidate>
               {/* Profile photo */}

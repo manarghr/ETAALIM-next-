@@ -28,13 +28,35 @@ export default function Header() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  // keep the header in sync with the mock session (login / logout / other tabs)
+  // Keep the header in sync with the REAL Supabase session (covers Google/OAuth
+  // logins too), falling back to the localStorage session for the mentor flow.
   useEffect(() => {
-    const sync = () => setSession(getSession());
+    const supabase = createClient();
+    const sync = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("name, role")
+          .eq("id", user.id)
+          .maybeSingle();
+        setSession({
+          name: profile?.name || user.email?.split("@")[0] || "User",
+          email: user.email ?? "",
+          role: profile?.role === "mentor" ? "mentor" : "student",
+        });
+      } else {
+        setSession(getSession());
+      }
+    };
     sync();
+    const { data: sub } = supabase.auth.onAuthStateChange(() => sync());
     window.addEventListener(AUTH_EVENT, sync);
     window.addEventListener("storage", sync);
     return () => {
+      sub.subscription.unsubscribe();
       window.removeEventListener(AUTH_EVENT, sync);
       window.removeEventListener("storage", sync);
     };

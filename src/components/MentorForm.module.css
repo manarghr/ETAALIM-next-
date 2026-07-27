@@ -172,6 +172,31 @@ div.card {
 }
 
 /* ===== skill tags ===== */
+/* Pill row used for pick-many choices (teaching years, student/teacher). */
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.chip {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  color: inherit;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.chipOn {
+  border-color: var(--primary, #534ab7);
+  background: var(--primary, #534ab7);
+  color: #fff;
+}
+
 .tags {
   display: flex;
   flex-wrap: wrap;

@@ -364,6 +364,26 @@
   font-size: 18px;
 }
 
+/* Red sibling of .success — form-level problems (email already registered,
+   a failed Google redirect) that belong above the form, not under one field. */
+.alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: rgba(214, 69, 69, 0.08);
+  border: 1px solid rgba(214, 69, 69, 0.3);
+  color: #b23b3b;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.alert i {
+  font-size: 18px;
+}
+
 /* ===== Responsive ===== */
 @media (max-width: 900px) {
   .authGrid {

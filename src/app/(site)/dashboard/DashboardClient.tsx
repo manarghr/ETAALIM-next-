@@ -30,6 +30,7 @@ import { getBalance, topUp, getTransactions, WalletTx } from "@/lib/wallet";
 import { getFavoriteIds, getFavorites } from "@/lib/favorites";
 import { getSeenAt, markSeen } from "@/lib/seen";
 import { getRegisteredMentors } from "@/lib/registeredMentors";
+import { effectiveCourses, EffectiveCourse } from "@/lib/catalog";
 import { getProfile, Profile } from "@/lib/profile";
 import { getApprovals, createApproval, setApprovalStatus, Approval } from "@/lib/approvals";
 import { countdownOf } from "@/lib/schedule";
@@ -154,8 +155,11 @@ export default function DashboardClient() {
 
   // Registered (non-seed) mentors, so followed/messaged real mentors resolve.
   const [registeredMentors, setRegisteredMentors] = useState<Mentor[]>([]);
+  // The real DB catalog, so mentor-created (non-seed) bought courses resolve.
+  const [dbCourses, setDbCourses] = useState<EffectiveCourse[]>([]);
   useEffect(() => {
     getRegisteredMentors().then(setRegisteredMentors);
+    effectiveCourses().then(setDbCourses);
   }, []);
 
   // Load the mentors the user follows (refreshes on follow/unfollow).
@@ -194,10 +198,21 @@ export default function DashboardClient() {
   useEffect(() => {
     // Gate: a real supabase, logged-in user can see the dashboard
     const supabase = createClient();
-    supabase.auth.getUser().then(({ data: { user }}) => {
+    supabase.auth.getUser().then(async ({ data: { user }}) => {
       if (!user) {
         router.replace("/login");
       } else {
+        // A Google account that never finished /welcome has no cycle/year, so
+        // half this dashboard would have nothing to show. Send them back.
+        const { data: p } = await supabase
+          .from("profiles")
+          .select("cycle, year")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (!p?.cycle || !p?.year) {
+          router.replace("/welcome");
+          return;
+        }
         setMounted(true); //confirmed -> show the dahsboard
         // Arriving from a notification (?view=messages) or a "Message" button on
         // a mentor's profile (?chat=<id>) opens the Messages panel.
@@ -356,11 +371,16 @@ export default function DashboardClient() {
   const minor = profile?.age != null && profile.age < 18;
   const parentEmail = profile?.parentEmail ?? "";
 
+  // Resolve a course from the real DB catalog first (covers mentor-created
+  // courses), falling back to the seed catalog.
+  const resolveCourse = (id: number): Course | undefined =>
+    dbCourses.find((c) => c.id === id) ?? getCourseById(id);
+
   // Dedupe by course: a student can now enroll in the same course in several
   // modes (recorded + private…), but it's still one course in their list.
   const seenCourseIds = new Set<number>();
   const enrolledCourses = enrollments
-    .map((e) => ({ e, course: getCourseById(e.courseId) }))
+    .map((e) => ({ e, course: resolveCourse(e.courseId) }))
     .filter((x): x is { e: Enrollment; course: Course } => Boolean(x.course))
     .filter((x) => {
       if (seenCourseIds.has(x.course.id)) return false;

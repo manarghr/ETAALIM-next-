@@ -4,6 +4,7 @@
 // server-side and become the source the public page can read later. RLS scopes
 // every read/write to the mentor's own row (auth.uid() = id).
 import { createClient } from "@/lib/supabase/client";
+import { getSession } from "@/lib/auth";
 import { Certificate, TeachTier, Teaching, getMentorById } from "@/data/mentors";
 
 export interface MentorProfileData {
@@ -22,6 +23,25 @@ export interface MentorProfileData {
   availability: string;
   profilePicture: string;
   teaching: Teaching[];
+}
+
+// Is the person looking at this page a mentor? Checks the REAL Supabase
+// session (so a Google mentor works), then falls back to the localStorage mock
+// session used by the seed-mentor demo logins.
+export async function isMentorSignedIn(): Promise<boolean> {
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (data?.role === "mentor") return true;
+  }
+  return getSession()?.role === "mentor";
 }
 
 // The current mentor's numeric public id (used to attribute their courses so

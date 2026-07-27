@@ -14,7 +14,6 @@ import { useEffect, useState, useRef, FormEvent } from "react";
 import AttachmentView from "@/components/AttachmentView";
 import { Attachment, readFileAsAttachment } from "@/lib/messages";
 import { useRouter } from "next/navigation";
-import { getSession } from "@/lib/auth";
 import { useI18n } from "@/i18n/I18nProvider";
 import { tr } from "@/data/localized";
 import { TIERS, TRACKS, formatDZD, formatDate } from "@/data/courses";
@@ -41,6 +40,7 @@ import {
   getMyMentorProfile,
   getMyMentorPublicId,
   saveMyMentorProfile,
+  isMentorSignedIn,
   MentorProfileData,
 } from "@/lib/mentorProfile";
 import { getLastRead, markThreadRead } from "@/lib/threadReads";
@@ -159,13 +159,24 @@ export default function MentorDashboardClient() {
 
   // Gate to mentors + load the client-only account after hydration. The
   // setState calls here are the intentional hydration gate.
-  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const s = getSession();
-    if (!s || s.role !== "mentor") {
-      router.replace("/login");
-      return;
-    }
+    let cancelled = false;
+    // The real Supabase session decides — a mentor who signed in with Google
+    // has no localStorage session at all. Fall back to the mock session for the
+    // seed-mentor demo logins that still run on it.
+    isMentorSignedIn().then((allowed) => {
+      if (cancelled) return;
+      if (allowed) {
+        boot();
+      } else {
+        router.replace("/login");
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+
+    function boot() {
     const acc = getMentorAccount();
     setPTitle(acc.title);
     setPBio(acc.bioOverride);
@@ -201,8 +212,8 @@ export default function MentorDashboardClient() {
       if (prof.certificates.length) setPCerts(prof.certificates);
       if (prof.achievements.length) setPAch(prof.achievements);
     });
+    }
   }, [router]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Load the mentor's courses and their real enrollment counts from Supabase,
   // and keep the counts live as students enroll.

@@ -2,12 +2,13 @@
 
 import {createClient} from "@/lib/supabase/client";
 
-import { useState, FormEvent } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
-import { setIdentity, setSignupProfile } from "@/lib/student";
+import { isEmailTaken } from "@/lib/signupErrors";
+import { setIdentity } from "@/lib/student";
 import { tr } from "@/data/localized";
 import { CYCLES, YEARS, streamsForYear, Cycle } from "@/data/education";
 import styles from "./AuthForm.module.css";
@@ -29,6 +30,24 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   const [success, setSuccess] = useState(false);
   // inline login error message (wrong password, etc.) shown under the field
   const [loginError, setLoginError] = useState<string | null>(null);
+  // form-level problem shown as a red banner above the form (email already
+  // registered, a Google sign-in that came back with an error).
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // /auth/callback sends failed Google sign-ins back here with ?authError=…
+  // (cancelled, or the address already belongs to a password account). Reading
+  // the query string is exactly the "external system" an effect is for.
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    const reason = new URLSearchParams(window.location.search).get("authError");
+    if (!reason) return;
+    setFormError(
+      reason === "email_taken" ? t("auth.googleEmailTaken") : t("auth.googleFailed")
+    );
+    // Drop the query string so a reload doesn't keep showing the banner.
+    window.history.replaceState({}, "", window.location.pathname);
+  }, [t]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Controlled fields that drive the cascading education section + minor check.
   const [age, setAge] = useState("");
@@ -105,59 +124,57 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
 
 
     // ===== real Supabase sign-up =====
+    setFormError(null);
     const supabase = createClient();
 
-    // 1. Create the auth user (Supabase hashes the password + starts a session).
+    // Create the auth user, carrying the full profile as metadata. A DB trigger
+    // (handle_new_user) turns that metadata into the profiles row — so it works
+    // even when email confirmation is on and there's no session yet.
     const { data: auth, error: signUpError } = await supabase.auth.signUp({
       email,
       password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        data: {
+          name,
+          phone,
+          role: "student",
+          age: ageNum,
+          parent_email: parentEmail || null,
+          parent_phone: parentPhone || null,
+          cycle,
+          year,
+          stream: extra || null,
+        },
+      },
     });
+    // One account per email address: refuse a second sign-up on an address that
+    // already has one (whether it was created with a password or with Google)
+    // and point them at the login page instead.
+    if (isEmailTaken(signUpError, auth.user)) {
+      setErrors({ email: true });
+      setFormError(t("auth.emailTaken"));
+      return;
+    }
     if (signUpError || !auth.user) {
-      // Show the real reason; don't falsely blame the email field.
-      alert(signUpError?.message ?? "Sign-up failed");
+      setFormError(signUpError?.message ?? "Sign-up failed");
       return;
     }
 
-    // 2. Save the rest of their profile — SAME id as the auth user.
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: auth.user.id,
-      name,
-      email,
-      phone,
-      role: "student",
-      age: ageNum,
-      parent_email: parentEmail || null,
-      parent_phone: parentPhone || null,
-      cycle,
-      year,
-      stream: extra || null,
-    });
-    if (profileError) {
-      alert(profileError.message);
+    // Email confirmation on → no session yet: ask them to check their inbox.
+    if (!auth.session) {
+      setSuccess(true);
       return;
     }
 
-    // 3. TEMPORARY: keep the old localStorage layer alive so the dashboard
-    //    still works while we migrate. We'll remove these in a later step.
-    login({ name, email, role: "student" });
-    setSignupProfile({
-      name,
-      email,
-      age: ageNum,
-      phone,
-      parentEmail,
-      parentPhone,
-      cycle: cycle as Cycle,
-      year,
-      extra,
-    });
-
+    // Confirmation off → straight into the dashboard.
     router.push("/dashboard");
   };
 
   const handleLogin = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoginError(null); // clear any previous error
+    setFormError(null);
     const data = new FormData(e.currentTarget);
     const email = String(data.get("email") ?? "").trim();
     const password = String(data.get("password") ?? "");
@@ -170,15 +187,24 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
       password,
     });
     if (error || !auth.user) {
-      // Show a friendly red message under the password field.
+      // They signed up, but never clicked the confirmation link.
+      if (error?.code === "email_not_confirmed") {
+        setFormError(t("auth.notConfirmed"));
+        return;
+      }
+      // Otherwise: wrong password — OR an account that only has Google as an
+      // identity (it has no password to check). We can't tell the two apart
+      // from the browser without leaking which emails are registered, so the
+      // message covers both.
       setLoginError(t("auth.invalidLogin"));
+      setFormError(t("auth.googleHint"));
       return;
     }
 
     // 2. Read this user's profile to learn their name + role.
     const { data: profile } = await supabase
       .from("profiles")
-      .select("name, role")
+      .select("name, role, cycle, year")
       .eq("id", auth.user.id)
       .single();
 
@@ -189,17 +215,27 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
     login({ name, email, role });
     setIdentity(name, email);
 
-    // 4. Route by role.
+    // 4. Route by role — but a student whose profile was created by Google
+    //    (no cycle/year yet) finishes signing up first.
+    if (role === "student" && (!profile?.cycle || !profile?.year)) {
+      router.push("/welcome");
+      return;
+    }
     router.push(role === "mentor" ? "/mentor-dashboard" : "/dashboard");
   };
 
   // Sign in with Google (OAuth). Redirects to Google, then back to /auth/callback.
   const handleGoogle = async () => {
     setLoginError(null);
+    setFormError(null);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+        // Always show the "choose an account" screen instead of auto-signing in.
+        queryParams: { prompt: "select_account" },
+      },
     });
     if (error) setLoginError(error.message);
   };
@@ -227,8 +263,20 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
 
             {success && (
               <div className={styles.success}>
-                <i className="fa fa-check-circle"></i>
-                {t("auth.successMsg")}
+                <i className="fa fa-envelope-o"></i>
+                {t("auth.checkEmail")}
+              </div>
+            )}
+
+            {formError && (
+              <div className={styles.alert}>
+                <i className="fa fa-exclamation-circle"></i>
+                <span>
+                  {formError}{" "}
+                  {isRegister && (
+                    <Link href="/login">{t("auth.switchLogin")}</Link>
+                  )}
+                </span>
               </div>
             )}
 
