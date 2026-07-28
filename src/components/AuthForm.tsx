@@ -33,17 +33,26 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
   // form-level problem shown as a red banner above the form (email already
   // registered, a Google sign-in that came back with an error).
   const [formError, setFormError] = useState<string | null>(null);
+  // green banner after a successful password reset
+  const [resetDone, setResetDone] = useState(false);
 
   // /auth/callback sends failed Google sign-ins back here with ?authError=…
   // (cancelled, or the address already belongs to a password account). Reading
   // the query string is exactly the "external system" an effect is for.
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    const reason = new URLSearchParams(window.location.search).get("authError");
-    if (!reason) return;
-    setFormError(
-      reason === "email_taken" ? t("auth.googleEmailTaken") : t("auth.googleFailed")
-    );
+    const params = new URLSearchParams(window.location.search);
+    const reason = params.get("authError");
+    // …and /reset-password sends people here with ?reset=1 once the new
+    // password is saved, so they can try it out straight away.
+    const justReset = params.get("reset") === "1";
+    if (!reason && !justReset) return;
+    if (reason) {
+      setFormError(
+        reason === "email_taken" ? t("auth.googleEmailTaken") : t("auth.authFailed")
+      );
+    }
+    if (justReset) setResetDone(true);
     // Drop the query string so a reload doesn't keep showing the banner.
     window.history.replaceState({}, "", window.location.pathname);
   }, [t]);
@@ -268,6 +277,13 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
               </div>
             )}
 
+            {resetDone && (
+              <div className={styles.success}>
+                <i className="fa fa-check-circle"></i>
+                {t("reset.done")}
+              </div>
+            )}
+
             {formError && (
               <div className={styles.alert}>
                 <i className="fa fa-exclamation-circle"></i>
@@ -328,9 +344,9 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <label className={styles.rememberMe}>
                     <input type="checkbox" /> {t("auth.rememberMe")}
                   </label>
-                  <a href="#" className={styles.forgot}>
+                  <Link href="/forgot-password" className={styles.forgot}>
                     {t("auth.forgot")}
-                  </a>
+                  </Link>
                 </div>
 
                 <button type="submit" className={styles.submitBtn}>
