@@ -582,28 +582,28 @@ export default function DashboardClient() {
                 </div>
 
                 <div className={styles.statGrid}>
-                  <div className={styles.statCard}>
+                  <div className={styles.statCard} style={{ animationDelay: `0ms` }}>
                     <span className={styles.statIcon} style={{ color: "#534ab7" }}>
                       <i className="fa fa-book"></i>
                     </span>
                     <span className={styles.statValue}>{enrolledCourses.length}</span>
                     <span className={styles.statLabel}>{t("dash.statCourses")}</span>
                   </div>
-                  <div className={styles.statCard}>
+                  <div className={styles.statCard} style={{ animationDelay: `70ms` }}>
                     <span className={styles.statIcon} style={{ color: "#1d9e75" }}>
                       <i className="fa fa-users"></i>
                     </span>
                     <span className={styles.statValue}>{followedMentors.length}</span>
                     <span className={styles.statLabel}>{t("dash.statMentors")}</span>
                   </div>
-                  <div className={styles.statCard}>
+                  <div className={styles.statCard} style={{ animationDelay: `140ms` }}>
                     <span className={styles.statIcon} style={{ color: "#e0894a" }}>
                       <i className="fa fa-money"></i>
                     </span>
                     <span className={styles.statValue}>{money(balance ?? 0)}</span>
                     <span className={styles.statLabel}>{t("dash.walletBalance")}</span>
                   </div>
-                  <div className={styles.statCard}>
+                  <div className={styles.statCard} style={{ animationDelay: `210ms` }}>
                     <span className={styles.statIcon} style={{ color: "#534ab7" }}>
                       <i className="fa fa-bell"></i>
                     </span>
@@ -670,8 +670,8 @@ export default function DashboardClient() {
 
                 <h3 className={styles.blockTitle}>{t("dash.recommended")}</h3>
                 <div className={styles.recoGrid}>
-                  {recommended.map((c) => (
-                    <div key={c.id} className={styles.recoCard}>
+                  {recommended.map((c, i) => (
+                    <div key={c.id} className={styles.recoCard} style={{ animationDelay: `${i * 60}ms` }}>
                       <div className={styles.recoThumb}>
                         <CourseBanner subject={c.major} seed={c.id} />
                         <div className={styles.favCorner}>
@@ -713,8 +713,8 @@ export default function DashboardClient() {
                   </div>
                 ) : (
                   <div className={styles.courseList}>
-                    {sessions.map(({ course, e, date }) => (
-                      <div key={course.id} className={styles.courseItem}>
+                    {sessions.map(({ course, e, date }, i) => (
+                      <div key={course.id} className={styles.courseItem} style={{ animationDelay: `${i * 60}ms` }}>
                         <div className={styles.ciThumb}>
                           <CourseBanner subject={course.major} seed={course.id} />
                         </div>
@@ -774,8 +774,8 @@ export default function DashboardClient() {
                   </div>
                 ) : (
                   <div className={styles.recoGrid}>
-                    {savedCourses.map((c) => (
-                      <div key={c.id} className={styles.recoCard}>
+                    {savedCourses.map((c, i) => (
+                      <div key={c.id} className={styles.recoCard} style={{ animationDelay: `${i * 60}ms` }}>
                         <div className={styles.recoThumb}>
                           <CourseBanner subject={c.major} seed={c.id} />
                           <div className={styles.favCorner}>
@@ -823,8 +823,8 @@ export default function DashboardClient() {
                   </div>
                 ) : (
                   <div className={styles.mentorList}>
-                    {followedMentors.map((m) => (
-                      <div key={m.id} className={styles.mentorItem}>
+                    {followedMentors.map((m, i) => (
+                      <div key={m.id} className={styles.mentorItem} style={{ animationDelay: `${i * 60}ms` }}>
                         <SmartImage
                           className={styles.mAvatar}
                           src={m.profilePicture}
@@ -959,8 +959,8 @@ export default function DashboardClient() {
 
                 <h3 className={styles.blockTitle}>{t("dash.buyFromBalance")}</h3>
                 <div className={styles.recoGrid}>
-                  {recommended.map((c) => (
-                    <div key={c.id} className={styles.recoCard}>
+                  {recommended.map((c, i) => (
+                    <div key={c.id} className={styles.recoCard} style={{ animationDelay: `${i * 60}ms` }}>
                       <div className={styles.recoThumb}>
                         <CourseBanner subject={c.major} seed={c.id} />
                         <div className={styles.favCorner}>
@@ -988,8 +988,8 @@ export default function DashboardClient() {
 
                 <h3 className={styles.blockTitle}>{t("dash.transactions")}</h3>
                 <div className={styles.txList}>
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className={styles.txItem}>
+                  {transactions.map((tx, i) => (
+                    <div key={tx.id} className={styles.txItem} style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}>
                       <span
                         className={styles.txIcon}
                         style={{
@@ -1032,10 +1032,10 @@ export default function DashboardClient() {
                   <p className={styles.muted}>{t("dash.noReceipts")}</p>
                 ) : (
                   <div className={styles.txList}>
-                    {receipts.map((r) => {
+                    {receipts.map((r, i) => {
                       const c = getCourseById(r.courseId);
                       return (
-                        <div key={r.id} className={styles.txItem}>
+                        <div key={r.id} className={styles.txItem} style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}>
                           <span className={styles.txIcon} style={{ color: "#534ab7" }}>
                             <i className="fa fa-file-text-o"></i>
                           </span>
@@ -1205,7 +1205,7 @@ export default function DashboardClient() {
                   </div>
                 ) : (
                   <div className={styles.notifList}>
-                    {studentNotifs.map((n) => {
+                    {studentNotifs.map((n, i) => {
                       const cfg =
                         n.type === "reply"
                           ? {
@@ -1231,7 +1231,7 @@ export default function DashboardClient() {
                               }),
                             };
                       return (
-                        <div key={n.id} className={styles.notifItem}>
+                        <div key={n.id} className={styles.notifItem} style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}>
                           <span
                             className={styles.notifIcon}
                             style={{ background: `${cfg.accent}1a`, color: cfg.accent }}

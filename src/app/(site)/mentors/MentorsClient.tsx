@@ -206,8 +206,8 @@ export default function MentorsClient({
           {/* Grid */}
           <div className={styles.grid}>
             {pageMentors.length > 0 ? (
-              pageMentors.map((mentor) => (
-                <div className={styles.card} key={mentor.id}>
+              pageMentors.map((mentor, i) => (
+                <div className={styles.card} key={mentor.id} style={{ animationDelay: `${i * 60}ms` }}>
                   <div className={styles.cardTop}>
                     <div className={styles.avatar}>
                       <SmartImage src={mentor.profilePicture} alt={mentor.name} width={120} height={120} />

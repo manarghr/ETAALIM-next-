@@ -3,6 +3,67 @@
   background: transparent;
 }
 
+/* ===== Entrance animations =====
+   The same slow rise-and-fade the admin back-office uses, so arriving at a
+   dashboard after logging in feels like the rest of the site. `backwards`
+   matters: it holds the "from" state during the delay, otherwise a staggered
+   card flashes at full opacity before its turn comes.
+   This file is shared with the mentor dashboard, so both get it. */
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+
+@keyframes secFade {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+/* The two halves of the shell arrive first, the sidebar a touch ahead. */
+.sidebar {
+  animation: riseIn 0.6s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
+}
+
+/* Re-runs when you switch tabs, so every section change gets the same gentle
+   fade instead of snapping into place. */
+.main section {
+  animation: secFade 0.55s cubic-bezier(0.22, 0.8, 0.36, 1);
+}
+
+/* Cards inside a section rise on their own, staggered from the JSX. */
+.statCard,
+.nextCard,
+.recoCard,
+.courseItem,
+.mentorItem,
+.consentPanel,
+.walletCard,
+.txItem,
+.notifItem {
+  animation: riseIn 0.55s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
+}
+
+/* Anyone who has asked their system to stop moving things gets no motion. */
+@media (prefers-reduced-motion: reduce) {
+  .sidebar,
+  .main section,
+  .statCard,
+  .nextCard,
+  .recoCard,
+  .courseItem,
+  .mentorItem,
+  .consentPanel,
+  .walletCard,
+  .txItem,
+  .notifItem {
+    animation: none;
+  }
+}
+
 /* Dashboards get a much wider container than the marketing pages (1200px). */
 .container {
   max-width: 1640px;

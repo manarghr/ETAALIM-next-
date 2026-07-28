@@ -475,3 +475,25 @@
     position: static;
   }
 }
+
+/* ===== Entrance =====
+   Same slow rise the rest of the site uses, so a course page settles in
+   instead of appearing all at once. Delays are set in the JSX. */
+@keyframes panelRise {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.panel,
+.joinCard {
+  animation: panelRise 0.5s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel,
+  .joinCard {
+    animation: none;
+  }
+}

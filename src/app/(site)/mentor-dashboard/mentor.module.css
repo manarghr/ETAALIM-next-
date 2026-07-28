@@ -1,3 +1,30 @@
+/* ===== Entrance animations =====
+   The shell (sidebar, sections, shared cards) is animated in
+   dashboard.module.css, which this dashboard also imports. These are the rows
+   and cards that only exist here. The stagger delay comes from the JSX. */
+@keyframes mRiseIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+}
+
+.courseCard,
+.studentRow,
+.studentGroup,
+.notifRow {
+  animation: mRiseIn 0.55s cubic-bezier(0.22, 0.8, 0.36, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .courseCard,
+  .studentRow,
+  .studentGroup,
+  .notifRow {
+    animation: none;
+  }
+}
+
 .sideAvatar {
   width: 74px;
   height: 74px;

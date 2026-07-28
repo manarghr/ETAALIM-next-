@@ -542,28 +542,28 @@ export default function MentorDashboardClient() {
                 </div>
 
                 <div className={shared.statGrid}>
-                  <div className={shared.statCard}>
+                  <div className={shared.statCard} style={{ animationDelay: `0ms` }}>
                     <span className={shared.statIcon} style={{ color: "#534ab7" }}>
                       <i className="fa fa-users"></i>
                     </span>
                     <span className={shared.statValue}>{realRoster.length}</span>
                     <span className={shared.statLabel}>{t("mentorDash.statStudents")}</span>
                   </div>
-                  <div className={shared.statCard}>
+                  <div className={shared.statCard} style={{ animationDelay: `70ms` }}>
                     <span className={shared.statIcon} style={{ color: "#1d9e75" }}>
                       <i className="fa fa-book"></i>
                     </span>
                     <span className={shared.statValue}>{courses.length}</span>
                     <span className={shared.statLabel}>{t("mentorDash.statCourses")}</span>
                   </div>
-                  <div className={shared.statCard}>
+                  <div className={shared.statCard} style={{ animationDelay: `140ms` }}>
                     <span className={shared.statIcon} style={{ color: "#e0894a" }}>
                       <i className="fa fa-star"></i>
                     </span>
                     <span className={shared.statValue}>{rating}</span>
                     <span className={shared.statLabel}>{t("mentorDash.statRating")}</span>
                   </div>
-                  <div className={shared.statCard}>
+                  <div className={shared.statCard} style={{ animationDelay: `210ms` }}>
                     <span className={shared.statIcon} style={{ color: "#534ab7" }}>
                       <i className="fa fa-money"></i>
                     </span>
@@ -643,8 +643,8 @@ export default function MentorDashboardClient() {
                   </div>
                 ) : (
                   <div className={m.courseList}>
-                    {courses.map((c) => (
-                      <div key={c.id} className={m.courseCard}>
+                    {courses.map((c, i) => (
+                      <div key={c.id} className={m.courseCard} style={{ animationDelay: `${i * 60}ms` }}>
                         <div className={m.courseMain}>
                           <div className={m.courseTop}>
                             <b>{courseTitle(c)}</b>
@@ -695,10 +695,10 @@ export default function MentorDashboardClient() {
                 {realRoster.length === 0 ? (
                   <p className={shared.muted}>{t("mentorDash.noStudents")}</p>
                 ) : (
-                  MODE_GROUPS.map((g) => {
+                  MODE_GROUPS.map((g, gi) => {
                     const list = realRoster.filter((r) => r.mode === g.mode);
                     return (
-                      <div key={g.mode} className={m.studentGroup}>
+                      <div key={g.mode} className={m.studentGroup} style={{ animationDelay: `${gi * 90}ms` }}>
                         <div className={m.groupHead}>
                           <i className={`fa ${g.icon}`}></i>
                           <h3>{t(g.labelKey)}</h3>
@@ -949,7 +949,7 @@ export default function MentorDashboardClient() {
                   <p className={shared.muted}>{t("mentorDash.notifEmpty")}</p>
                 ) : (
                   <div className={m.notifList}>
-                    {notifs.map((n) => {
+                    {notifs.map((n, i) => {
                       const icon =
                         n.type === "message"
                           ? "fa-comment"
@@ -969,6 +969,7 @@ export default function MentorDashboardClient() {
                         <div
                           key={n.id}
                           className={`${m.notifRow} ${m[`notif_${n.type}`]}`}
+                          style={{ animationDelay: `${Math.min(i, 10) * 50}ms` }}
                         >
                           <span className={m.notifIcon}>
                             <i className={`fa ${icon}`}></i>

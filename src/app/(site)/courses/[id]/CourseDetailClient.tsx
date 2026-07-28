@@ -106,20 +106,20 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
         <div className="container">
           <div className={styles.layout}>
             <main className={styles.main}>
-              <div className={styles.panel}>
+              <div className={styles.panel} style={{ animationDelay: `80ms` }}>
                 <h2 className={styles.sectionTitle}>{t("courseDetail.aboutTitle")}</h2>
                 {/* the admin-written description wins over the generated text */}
                 <p className={styles.description}>{description || aboutBody}</p>
               </div>
 
-              <div className={styles.panel}>
+              <div className={styles.panel} style={{ animationDelay: `150ms` }}>
                 <h2 className={styles.sectionTitle}>{t("courseDetail.joinTitle")}</h2>
                 <p className={styles.description} style={{ marginTop: 0, marginBottom: 20 }}>
                   {t("courseDetail.joinIntro")}
                 </p>
                 <div className={styles.joinGrid}>
-                  {joinOptions.map((opt) => (
-                    <div className={styles.joinCard} key={opt.mode}>
+                  {joinOptions.map((opt, i) => (
+                    <div className={styles.joinCard} key={opt.mode} style={{ animationDelay: `${120 + i * 70}ms` }}>
                       <div className={styles.joinIcon}>
                         <i className={`fa ${opt.icon}`}></i>
                       </div>
@@ -148,12 +148,12 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
                 </div>
               </div>
 
-              <div className={styles.panel} id="learn">
+              <div className={styles.panel} style={{ animationDelay: `220ms` }} id="learn">
                 <h2 className={styles.sectionTitle}>{t("courseDetail.learnTitle")}</h2>
                 <CourseLearn course={course} enrolled={enrolled} />
               </div>
 
-              <div className={styles.panel}>
+              <div className={styles.panel} style={{ animationDelay: `290ms` }}>
                 <h2 className={styles.sectionTitle}>{t("courseDetail.mentorsTitle")}</h2>
                 <div className={styles.mentorsGrid}>
                   <div className={styles.mentorCard}>
@@ -198,7 +198,7 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
               </div>
 
               {relatedCourses.length > 0 && (
-                <div className={styles.panel}>
+                <div className={styles.panel} style={{ animationDelay: `360ms` }}>
                   <h2 className={styles.sectionTitle}>{t("courseDetail.relatedTitle")}</h2>
                   <div className={styles.relatedList}>
                     {relatedCourses.map((rc) => (
@@ -211,7 +211,7 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
                 </div>
               )}
 
-              <div className={styles.panel}>
+              <div className={styles.panel} style={{ animationDelay: `430ms` }}>
                 <h2 className={styles.sectionTitle}>{t("review.title")}</h2>
                 <CourseReviews course={course} enrolled={enrolled} />
               </div>
