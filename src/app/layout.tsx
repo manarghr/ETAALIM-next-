@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 //
 // It is a fixed string with no user input in it (the only thing read is
 // compared against a whitelist of three locales). If the CSP is ever tightened
-// to nonces, this tag needs the nonce — see security-process.md §3.
+// to nonces, this tag needs the nonce.
 const LANG_BOOTSTRAP = `try{var l=localStorage.getItem('lang');if(l==='ar'||l==='fr'||l==='en'){var d=document.documentElement;d.lang=l;d.dir=l==='ar'?'rtl':'ltr';}}catch(e){}`;
 
 export default function RootLayout({

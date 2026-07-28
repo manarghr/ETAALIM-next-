@@ -10,7 +10,7 @@ import { NextResponse, type NextRequest } from "next/server";
 //
 // This is a *gate*, not the wall. The wall is Row Level Security in Postgres:
 // even if someone bypassed this file entirely, the database still refuses to
-// hand them another user's rows. See security-process.md §1.
+// hand them another user's rows.
 //
 // (In Next 16 this file convention is named `proxy`; `middleware` is deprecated.)
 

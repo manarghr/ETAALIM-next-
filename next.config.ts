@@ -14,8 +14,8 @@ const supabaseWs = supabaseUrl.replace(/^https:/, "wss:");
 //
 // `'unsafe-inline'` on script-src is the honest compromise: Next inlines its
 // hydration bootstrap, and the nonce alternative forces every page to render
-// dynamically (no static caching). See security-process.md §3 for the upgrade
-// path if this ever guards real money.
+// dynamically (no static caching). Worth revisiting if this ever guards real
+// money: generate a nonce in proxy.ts and swap it in here.
 const csp = [
   `default-src 'self'`,
   `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""}`,
