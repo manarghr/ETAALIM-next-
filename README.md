@@ -43,17 +43,17 @@ with its own price.
 
 ## Tech stack
 
-| Layer | Choice | Why |
-|---|---|---|
-| Framework | Next.js 16 (App Router) | It is the frontend *and* the backend: Server Components, Route Handlers and a proxy layer in one deploy. No separate Express server. |
-| UI | React 19 with the React Compiler | The compiler handles memoisation, so the components stay readable. |
-| Styling | CSS Modules | No UI framework, no Tailwind. Scoped, hand-written CSS. |
-| Database | Supabase Postgres | The data is deeply relational (students, enrollments, courses, mentors, reviews), so a relational database rather than a document store. |
-| Auth | Supabase Auth | Email and password plus Google, email confirmation, password reset, one account per address. |
-| Authorisation | Row Level Security | Permissions live in the database, next to the data, instead of in the UI where anyone could bypass them. |
-| Live updates | Supabase Realtime | Messages and notifications arrive by subscription, not polling. |
-| i18n | Custom provider (`src/i18n`) | Three languages including full RTL, with no dependency. |
-| Tests | Vitest | Unit tests on the logic that breaks silently. |
+| Layer | Choice |
+|---|---|
+| Framework | Next.js 16 (App Router) |
+| UI | React 19 with the React Compiler |
+| Styling | CSS Modules |
+| Database | Supabase Postgres |
+| Auth | Supabase Auth |
+| Authorisation | Row Level Security |
+| Live updates | Supabase Realtime |
+| i18n | Custom provider (`src/i18n`) |
+| Tests | Vitest |
 
 ## Features by role
 
@@ -123,20 +123,6 @@ npm install
 cp .env.example .env.local   # fill in your Supabase project URL and anon key
 npm run dev                  # http://localhost:3000
 ```
-
-| Script | What it does |
-|---|---|
-| `npm run dev` | Development server |
-| `npm run build` | Production build |
-| `npm start` | Serve the production build |
-| `npm run lint` | ESLint |
-| `npm test` | Vitest, once |
-
-Two environment variables are required (`NEXT_PUBLIC_SUPABASE_URL` and
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`). Set `NEXT_PUBLIC_SITE_URL` in production so the
-sitemap, robots.txt and link previews use the real domain. The anon key is meant
-to be public, since the database is protected by its policies rather than by
-hiding the key. The `service_role` key must never appear in this project.
 
 ## Project structure
 
