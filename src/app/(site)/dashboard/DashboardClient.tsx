@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import { createClient } from "@/lib/supabase/client";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
@@ -824,10 +825,12 @@ export default function DashboardClient() {
                   <div className={styles.mentorList}>
                     {followedMentors.map((m) => (
                       <div key={m.id} className={styles.mentorItem}>
-                        <img
+                        <SmartImage
                           className={styles.mAvatar}
                           src={m.profilePicture}
                           alt={mentorDisplayName(m, locale)}
+                          width={48}
+                          height={48}
                         />
                         <div className={styles.mInfo}>
                           <b>{mentorDisplayName(m, locale)}</b>

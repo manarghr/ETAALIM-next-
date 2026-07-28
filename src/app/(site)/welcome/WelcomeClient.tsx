@@ -19,6 +19,8 @@ import {
   completeMentorOnboarding,
   OnboardingState,
 } from "@/lib/onboarding";
+import PageLoader from "@/components/PageLoader";
+import SmartImage from "@/components/SmartImage";
 import s from "@/components/AuthForm.module.css";
 import m from "@/components/MentorForm.module.css";
 
@@ -163,14 +165,14 @@ export default function WelcomeClient() {
   };
 
   // Don't flash the form before we know whether it's even needed.
-  if (!checked) return null;
+  if (!checked) return <PageLoader />;
 
   return (
     <div className={s.authPage}>
       <div className="container">
         <div className={s.authGrid}>
           <div className={s.illustration}>
-            <img src="/images/auth-register.svg" alt="" />
+            <SmartImage src="/images/auth-register.svg" alt="" width={520} height={420} priority />
           </div>
 
           <div className={s.card}>

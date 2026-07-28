@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import Link from "next/link";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./page.module.css";
 
@@ -140,9 +141,9 @@ export default function ContactForm() {
             <input type="checkbox" id="consent" name="consent" />
             <span className={styles.checkmark}></span>
             {t("contactPage.consentPre")}{" "}
-            <a href="#" className={styles.termsLink}>
+            <Link href="/privacy" className={styles.termsLink} target="_blank">
               {t("contactPage.privacyPolicy")}
-            </a>{" "}
+            </Link>{" "}
             {t("contactPage.consentPost")}
           </label>
           <div className={styles.errorMessage}>{t("contactPage.errConsent")}</div>

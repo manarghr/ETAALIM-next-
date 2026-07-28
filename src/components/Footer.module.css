@@ -87,7 +87,8 @@
   gap: 15px;
 }
 
-.socialIcons a {
+.socialIcons a,
+.socialIcons span {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,6 +99,8 @@
   transition: all 0.3s ease;
 }
 
+/* Only real links react to the pointer — decorative icons shouldn't pretend
+   to be clickable. */
 .socialIcons a:hover {
   background-color: #534ab7;
   transform: translateY(-3px);

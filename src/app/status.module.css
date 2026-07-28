@@ -1,0 +1,84 @@
+/* Shared by error.tsx and not-found.tsx — the two "something isn't right"
+   screens, so they look like one deliberate part of the site. */
+.wrap {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  background: #f7f8fc;
+}
+
+.card {
+  max-width: 480px;
+  width: 100%;
+  text-align: center;
+  background: #fff;
+  border-radius: 18px;
+  padding: 46px 36px;
+  box-shadow: 0 10px 40px rgba(20, 20, 60, 0.06);
+}
+
+.icon {
+  font-size: 42px;
+  color: #e0a800;
+  margin-bottom: 18px;
+}
+
+.code {
+  display: block;
+  font-size: 58px;
+  font-weight: 800;
+  line-height: 1;
+  color: #534ab7;
+  margin-bottom: 10px;
+}
+
+.card h1 {
+  font-size: 24px;
+  margin-bottom: 10px;
+}
+
+.card p {
+  color: #6b7280;
+  line-height: 1.65;
+  margin-bottom: 26px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.primary,
+.secondary {
+  display: inline-block;
+  padding: 11px 22px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14.5px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  text-decoration: none;
+}
+
+.primary {
+  background: #534ab7;
+  color: #fff;
+}
+
+.primary:hover {
+  background: #443c9e;
+}
+
+.secondary {
+  background: #fff;
+  color: #534ab7;
+  border-color: #d7d4ee;
+}
+
+.secondary:hover {
+  background: #f3f2fb;
+}

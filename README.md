@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# E-Taalim (Next.js)
 
-## Getting Started
+An Algerian e-learning platform: a course catalogue that follows the real school
+system (primaire → moyen → secondaire, with the 2AS/3AS streams), mentor
+profiles, student and mentor dashboards, a wallet, realtime messaging, and an
+admin back-office. Trilingual — English, French and Arabic (RTL).
 
-First, run the development server:
+This is the Next.js rewrite of the original PHP site, which lives in the parent
+folder.
+
+## Stack
+
+- **Next.js 16** (App Router, React 19, React Compiler) — the frontend *and* the
+  backend; no separate server.
+- **Supabase** — Postgres, Auth (email/password + Google), Realtime, Row Level
+  Security. All authorisation lives in the database.
+- **CSS Modules**, no UI framework.
+- **Vitest** for unit tests.
+
+## Running it
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local   # then fill in your Supabase project URL + anon key
+npm run dev                  # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+| Script | What it does |
+|---|---|
+| `npm run dev` | Development server |
+| `npm run build` | Production build |
+| `npm start` | Serve the production build |
+| `npm run lint` | ESLint |
+| `npm test` | Vitest (run once) |
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+See `.env.example`. Two variables are required (`NEXT_PUBLIC_SUPABASE_URL`,
+`NEXT_PUBLIC_SUPABASE_ANON_KEY`); `NEXT_PUBLIC_SITE_URL` should be set in
+production so the sitemap, robots.txt and link previews use the real domain.
 
-## Learn More
+The anon key is *meant* to be public. The `service_role` key must never appear
+in this project.
 
-To learn more about Next.js, take a look at the following resources:
+## Layout
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+src/app/(site)/   public pages + the student & mentor dashboards
+src/app/admin/    admin back-office (a real Supabase user with role = 'admin')
+src/app/auth/     OAuth / email-link callback
+src/components/   shared UI
+src/lib/          data access — one file per feature, all talking to Supabase
+src/data/         static catalogue data (education structure, seed mentors)
+src/i18n/         translations + the locale provider
+src/proxy.ts      session refresh + server-side route protection
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Docs
 
-## Deploy on Vercel
+- `security-process.md` — what protects the app, and what to harden next.
+- `hosting-process.md` — how to put it online (Vercel), and domain names.
+- `backend-process.md` — how the Supabase backend was built (**not committed**:
+  it contains credentials).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Database work — tables, policies, functions, triggers — lives in Supabase, not
+in this repo. When you change it, note it in the commit message.

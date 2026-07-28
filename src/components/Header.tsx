@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import LanguageSwitcher from "./LanguageSwitcher";
+import SmartImage from "./SmartImage";
 import UserMenu from "./UserMenu";
 import { useI18n } from "@/i18n/I18nProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -100,7 +101,8 @@ export default function Header() {
         </button>
 
         <Link href="/" className={styles.logo} onClick={close}>
-          <img src="/images/logo.png" alt="E-Taalim" />
+          {/* The header logo is above the fold on every page — load it eagerly. */}
+          <SmartImage src="/images/logo.png" alt="E-Taalim" width={54} height={54} priority />
           <span className={styles.wordmark}>
             <span className={styles.wordmarkAccent}>E-</span>Taalim
           </span>

@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
@@ -397,7 +398,9 @@ export default function CoursesClient({
                       </span>
                       <h3>{tr(course.subject, locale)}</h3>
                       <div className={styles.mentor}>
-                        {mentor && <img src={mentor.profilePicture} alt={mentor.name} />}
+                        {mentor && (
+                          <SmartImage src={mentor.profilePicture} alt={mentor.name} width={40} height={40} />
+                        )}
                         {t("coursesPage.by")}{" "}
                         {mentor ? mentorDisplayName(mentor, locale) : ""}
                       </div>

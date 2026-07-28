@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { Mentor, mentorYearCodes, TeachTier } from "@/data/mentors";
@@ -79,7 +80,7 @@ export default function MentorProfileClient({
         <div className="container">
           <div className={styles.headerInner}>
             <div className={styles.headerAvatar}>
-              <img src={mentor.profilePicture} alt={mentor.name} />
+              <SmartImage src={mentor.profilePicture} alt={mentor.name} width={160} height={160} priority />
             </div>
             <div className={styles.headerText}>
               <h1>{displayName}</h1>

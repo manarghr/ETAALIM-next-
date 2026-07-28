@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { createClient } from "@/lib/supabase/client";
+import PageLoader from "@/components/PageLoader";
+import SmartImage from "@/components/SmartImage";
 import s from "@/components/AuthForm.module.css";
 
 export default function ResetPasswordClient() {
@@ -113,14 +115,14 @@ export default function ResetPasswordClient() {
     router.push("/login?reset=1");
   };
 
-  if (valid === null) return null;
+  if (valid === null) return <PageLoader />;
 
   return (
     <div className={s.authPage}>
       <div className="container">
         <div className={s.authGrid}>
           <div className={s.illustration}>
-            <img src="/images/auth-login.svg" alt="" />
+            <SmartImage src="/images/auth-login.svg" alt="" width={520} height={420} priority />
           </div>
 
           <div className={s.card}>

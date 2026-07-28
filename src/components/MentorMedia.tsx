@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import { useState } from "react";
 import type { LessonVideo } from "@/data/mentors";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -44,7 +45,7 @@ export default function MentorMedia({ poster, video, lessons }: MentorMediaProps
           />
         ) : (
           <>
-            <img className={styles.poster} src={currentPoster} alt={currentTitle} />
+            <SmartImage className={styles.poster} src={currentPoster} alt={currentTitle} width={640} height={360} />
             <div className={styles.overlay} onClick={() => setPlaying(true)}>
               <span className={styles.badge}>
                 <i className="fa fa-play-circle"></i> {t("mentorDetail.sneakPeek")}
@@ -75,7 +76,7 @@ export default function MentorMedia({ poster, video, lessons }: MentorMediaProps
             onClick={() => select(i)}
           >
             <div className={styles.lessonThumb}>
-              <img src={lesson.thumbnail} alt="" />
+              <SmartImage src={lesson.thumbnail} alt="" width={120} height={68} />
               <i className="fa fa-play"></i>
             </div>
             <div className={styles.lessonInfo}>

@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import PageHero from "@/components/PageHero";
@@ -209,7 +210,7 @@ export default function MentorsClient({
                 <div className={styles.card} key={mentor.id}>
                   <div className={styles.cardTop}>
                     <div className={styles.avatar}>
-                      <img src={mentor.profilePicture} alt={mentor.name} />
+                      <SmartImage src={mentor.profilePicture} alt={mentor.name} width={120} height={120} />
                       <span className={styles.verified} title="Verified mentor">
                         <i className="fa fa-check"></i>
                       </span>

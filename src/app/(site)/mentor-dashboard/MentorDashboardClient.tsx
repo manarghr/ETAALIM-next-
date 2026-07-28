@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import {
   getEnrollmentCounts,
   getMentorRoster,
@@ -493,7 +494,7 @@ export default function MentorDashboardClient() {
           {/* ===== Sidebar ===== */}
           <aside className={shared.sidebar}>
             <div className={shared.profile}>
-              <img className={m.sideAvatar} src={meAvatar} alt={meName} />
+              <SmartImage className={m.sideAvatar} src={meAvatar} alt={meName} width={96} height={96} />
               <div className={shared.pName}>{meName}</div>
               <div className={shared.pGrade}>{tr(meMajor, locale)}</div>
             </div>
@@ -999,7 +1000,7 @@ export default function MentorDashboardClient() {
 
                 <div className={m.profileCard}>
                   <div className={m.profileTop}>
-                    <img className={m.profileAvatar} src={meAvatar} alt={meName} />
+                    <SmartImage className={m.profileAvatar} src={meAvatar} alt={meName} width={96} height={96} />
                     <div>
                       <b>{meName}</b>
                       <span>{pTitle || meTitle}</span>
@@ -1230,7 +1231,7 @@ export default function MentorDashboardClient() {
                 <div className="container">
                   <div className={pv.headerInner}>
                     <div className={pv.headerAvatar}>
-                      <img src={meAvatar} alt={meName} />
+                      <SmartImage src={meAvatar} alt={meName} width={160} height={160} />
                     </div>
                     <div className={pv.headerText}>
                       <h1>{meName}</h1>

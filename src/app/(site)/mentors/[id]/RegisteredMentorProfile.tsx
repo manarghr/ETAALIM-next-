@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Mentor } from "@/data/mentors";
 import { getRegisteredMentor } from "@/lib/registeredMentors";
+import PageLoader from "@/components/PageLoader";
 import MentorProfileClient from "./MentorProfileClient";
 
 // Resolves a registered (non-seed) mentor by their numeric public_id, then
@@ -23,6 +24,6 @@ export default function RegisteredMentorProfile({
     });
   }, [publicId, router]);
 
-  if (!mentor) return null;
+  if (!mentor) return <PageLoader />;
   return <MentorProfileClient mentor={mentor} />;
 }

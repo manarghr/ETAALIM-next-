@@ -1,5 +1,6 @@
 "use client";
 
+import SmartImage from "@/components/SmartImage";
 import { useState, useEffect, useMemo, FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,8 +29,8 @@ import { cssVars, categoryAccent } from "@/lib/theme";
 import { CYCLE_ORDER, StudentRecord } from "@/data/students";
 import { getAllStudents } from "@/lib/adminStudents";
 import { YEARS, educationLabel, Cycle } from "@/data/education";
-import { getReviews, averageRating, reviewCount } from "@/lib/reviews";
-import { isAdminUnlocked, unlockAdmin, lockAdmin } from "@/lib/admin";
+import { getAllReviews, CourseReview } from "@/lib/courseReviews";
+import { isAdmin, signInAsAdmin, signOutAdmin } from "@/lib/admin";
 import {
   getAdminCourses,
   addAdminCourse,
@@ -101,7 +102,9 @@ export default function AdminClient() {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
+  const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState(false);
 
   const [section, setSection] = useState<Section>("overview");
@@ -123,6 +126,9 @@ export default function AdminClient() {
 
   // Students = demo directory + everyone who registered through the signup form.
   const [allStudents, setAllStudents] = useState<StudentRecord[]>([]);
+  const [reviewsByCourse, setReviewsByCourse] = useState<
+    Record<number, CourseReview[]>
+  >({});
 
   // Course management
   const [adminCourses, setAdminCourses] = useState<AdminCourse[]>([]);
@@ -135,10 +141,28 @@ export default function AdminClient() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
-    setUnlocked(isAdminUnlocked());
+    isAdmin().then(setUnlocked);
+  }, []);
+
+  // The admin data is RLS-scoped to admins, so only fetch it once we know we
+  // are one — otherwise every read comes back empty.
+  useEffect(() => {
+    if (!unlocked) return;
     getAdminCourses().then(setAdminCourses);
     getAllStudents().then(setAllStudents);
-  }, []);
+    getAllReviews().then(setReviewsByCourse);
+  }, [unlocked]);
+
+  // Counts/averages over the REAL reviews table (this panel used to read the
+  // old localStorage demo store, so it showed nothing while the public course
+  // pages showed the actual reviews).
+  const reviewCount = (courseId: number) =>
+    (reviewsByCourse[courseId] ?? []).length;
+  const averageRating = (courseId: number) => {
+    const list = reviewsByCourse[courseId] ?? [];
+    if (list.length === 0) return 0;
+    return list.reduce((s, r) => s + r.rating, 0) / list.length;
+  };
 
   // Escape closes whichever modal is open.
   useEffect(() => {
@@ -153,9 +177,12 @@ export default function AdminClient() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (unlockAdmin(pw)) {
+    setSigningIn(true);
+    const ok = await signInAsAdmin(email.trim(), pw);
+    setSigningIn(false);
+    if (ok) {
       setUnlocked(true);
       setError(false);
       setPw("");
@@ -191,10 +218,23 @@ export default function AdminClient() {
     return (
       <div className={styles.gateWrap}>
         <form className={styles.gateCard} onSubmit={submit}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.png" alt="E-Taalim" className={styles.gateLogo} />
+          <SmartImage src="/images/logo.png" alt="E-Taalim" className={styles.gateLogo} width={64} height={64} priority />
           <h1>{t("admin.gateTitle")}</h1>
           <p>{t("admin.gateSub")}</p>
+          <div className={`${styles.gateField} ${error ? styles.gateError : ""}`}>
+            <i className="fa fa-envelope"></i>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                setError(false);
+              }}
+              placeholder={t("auth.emailPh")}
+              autoComplete="username"
+              autoFocus
+            />
+          </div>
           <div className={`${styles.gateField} ${error ? styles.gateError : ""}`}>
             <i className="fa fa-key"></i>
             <input
@@ -204,13 +244,13 @@ export default function AdminClient() {
                 setPw(e.target.value);
                 setError(false);
               }}
-              placeholder={t("admin.passwordPh")}
-              autoFocus
+              placeholder={t("auth.passwordPh")}
+              autoComplete="current-password"
             />
           </div>
           {error && <span className={styles.gateMsg}>{t("admin.wrong")}</span>}
-          <button type="submit" className={styles.gateBtn}>
-            {t("admin.unlock")}
+          <button type="submit" className={styles.gateBtn} disabled={signingIn}>
+            {signingIn ? t("admin.signingIn") : t("admin.unlock")}
           </button>
         </form>
       </div>
@@ -407,7 +447,9 @@ export default function AdminClient() {
 
   const latestReviews = courses
     .slice(0, 12)
-    .flatMap((c) => getReviews(c.id).slice(0, 1).map((r) => ({ r, course: c })))
+    .flatMap((c) =>
+      (reviewsByCourse[c.id] ?? []).slice(0, 1).map((r) => ({ r, course: c }))
+    )
     .slice(0, 6);
 
   const gradeOf = (s: StudentRecord) =>
@@ -517,8 +559,7 @@ export default function AdminClient() {
           {/* ===== Sidebar ===== */}
           <aside className={styles.sidebar}>
             <div className={styles.adminBadge}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/images/logo.png" alt="E-Taalim" className={styles.badgeLogo} />
+              <SmartImage src="/images/logo.png" alt="E-Taalim" className={styles.badgeLogo} width={40} height={40} />
               <b>E-Taalim</b>
               <span>{t("admin.role")}</span>
             </div>
@@ -553,8 +594,8 @@ export default function AdminClient() {
               </div>
               <button
                 className={styles.lockBtn}
-                onClick={() => {
-                  lockAdmin();
+                onClick={async () => {
+                  await signOutAdmin();
                   setUnlocked(false);
                 }}
               >
@@ -562,9 +603,9 @@ export default function AdminClient() {
               </button>
               <button
                 className={styles.logoutBtn}
-                onClick={() => {
+                onClick={async () => {
                   // leave the admin session and return to the public site
-                  lockAdmin();
+                  await signOutAdmin();
                   router.push("/");
                 }}
               >
@@ -638,24 +679,14 @@ export default function AdminClient() {
                       </div>
                       <div className={styles.reviewBody}>
                         <div className={styles.reviewTop}>
-                          {/* reviewer name links to their student profile */}
-                          {r.studentId ? (
-                            <Link
-                              href={`/admin/students/${r.studentId}`}
-                              className={styles.reviewAuthor}
-                            >
-                              {r.author} <i className="fa fa-arrow-right"></i>
-                            </Link>
-                          ) : (
-                            <b>{r.author}</b>
-                          )}
+                          {/* the review row stores the author's name, so there
+                              is no student id to link through to */}
+                          <b>{r.author}</b>
                           <span className={styles.rating}>
                             <i className="fa fa-star"></i> {r.rating}
                           </span>
                         </div>
-                        <p className={styles.reviewText}>
-                          {r.textKey ? t(r.textKey) : r.text}
-                        </p>
+                        <p className={styles.reviewText}>{r.text}</p>
                         <span className={styles.reviewCourse}>
                           {t("admin.reviewOn", { course: tr(course.subject, locale) })}
                         </span>
@@ -975,7 +1006,7 @@ export default function AdminClient() {
                                   if (!m) return null;
                                   return (
                                     <span key={mid} className={styles.mentorChip}>
-                                      <img src={m.profilePicture} alt={m.name} />
+                                      <SmartImage src={m.profilePicture} alt={m.name} width={48} height={48} />
                                       {mentorDisplayName(m, locale)}
                                       <button
                                         type="button"
@@ -1174,7 +1205,7 @@ export default function AdminClient() {
                           <tr key={mt.id}>
                             <td>
                               <div className={styles.mentorCell}>
-                                <img src={mt.profilePicture} alt={mt.name} />
+                                <SmartImage src={mt.profilePicture} alt={mt.name} width={48} height={48} />
                                 <span>{mentorDisplayName(mt, locale)}</span>
                               </div>
                             </td>

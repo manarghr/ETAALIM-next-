@@ -2,6 +2,7 @@
 
 import { useState, FormEvent, ChangeEvent, KeyboardEvent } from "react";
 import Link from "next/link";
+import SmartImage from "@/components/SmartImage";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
@@ -163,7 +164,7 @@ export default function MentorForm() {
         <div className={s.authGrid}>
           {/* Illustration */}
           <div className={s.illustration}>
-            <img src="/images/mentor-illustration.svg" alt="" />
+            <SmartImage src="/images/mentor-illustration.svg" alt="" width={520} height={420} priority />
           </div>
 
           {/* Card */}
@@ -189,7 +190,13 @@ export default function MentorForm() {
               {/* Profile photo */}
               <div className={m.photoRow}>
                 <div className={m.photoPreview}>
-                  {photo ? <img src={photo} alt="" /> : <i className="fa fa-user"></i>}
+                  {/* A freshly picked file is a data: URL — SmartImage keeps it
+                      on a plain <img>, which is the only thing that can show it. */}
+                  {photo ? (
+                    <SmartImage src={photo} alt="" width={120} height={120} />
+                  ) : (
+                    <i className="fa fa-user"></i>
+                  )}
                   <label
                     htmlFor="mentor-photo"
                     className={m.photoBtn}
@@ -489,13 +496,13 @@ export default function MentorForm() {
                 <label className={s.checkboxContainer}>
                   <input type="checkbox" name="terms" />
                   {t("auth.agreePre")}{" "}
-                  <a href="#" className={s.termsLink}>
+                  <Link href="/terms" className={s.termsLink} target="_blank">
                     {t("auth.terms")}
-                  </a>{" "}
+                  </Link>{" "}
                   {t("auth.and")}{" "}
-                  <a href="#" className={s.termsLink}>
+                  <Link href="/privacy" className={s.termsLink} target="_blank">
                     {t("auth.privacy")}
-                  </a>
+                  </Link>
                 </label>
                 <div className={s.errorMessage}>{t("auth.errTerms")}</div>
               </div>

@@ -26,6 +26,8 @@ export function isEmailTaken(
       error.code === "email_exists"
     );
   }
-  // Confirmation ON: a decoy user with no identities = the email is taken.
-  return Boolean(user && (user.identities?.length ?? 0) === 0);
+  // Confirmation ON: a decoy user with an EMPTY identities array = taken.
+  // The array must actually be present and empty — a missing field tells us
+  // nothing, and guessing "taken" there would block a legitimate sign-up.
+  return Boolean(user && Array.isArray(user.identities) && user.identities.length === 0);
 }

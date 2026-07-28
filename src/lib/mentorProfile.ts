@@ -4,7 +4,6 @@
 // server-side and become the source the public page can read later. RLS scopes
 // every read/write to the mentor's own row (auth.uid() = id).
 import { createClient } from "@/lib/supabase/client";
-import { getSession } from "@/lib/auth";
 import { Certificate, TeachTier, Teaching, getMentorById } from "@/data/mentors";
 
 export interface MentorProfileData {
@@ -25,23 +24,26 @@ export interface MentorProfileData {
   teaching: Teaching[];
 }
 
-// Is the person looking at this page a mentor? Checks the REAL Supabase
-// session (so a Google mentor works), then falls back to the localStorage mock
-// session used by the seed-mentor demo logins.
+// Is the person looking at this page a mentor? Only the REAL Supabase session
+// counts. There used to be a `getSession()?.role === "mentor"` fallback to the
+// localStorage mock, which meant anyone could type
+// `localStorage.setItem("etaalim.session", '{"role":"mentor"}')` in the console
+// and walk into the mentor dashboard. (The data behind it was still safe — RLS
+// would have returned nothing — but a gate you can open from the console is not
+// a gate.) Mentors sign in for real now, so nothing needs the fallback.
 export async function isMentorSignedIn(): Promise<boolean> {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) {
-    const { data } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle();
-    if (data?.role === "mentor") return true;
-  }
-  return getSession()?.role === "mentor";
+  if (!user) return false;
+
+  const { data } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle();
+  return data?.role === "mentor";
 }
 
 // The current mentor's numeric public id (used to attribute their courses so

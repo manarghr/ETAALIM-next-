@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import SmartImage from "@/components/SmartImage";
 import {
   Course,
   getRelatedCourses,
@@ -157,7 +158,7 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
                 <div className={styles.mentorsGrid}>
                   <div className={styles.mentorCard}>
                     <div className={styles.mentorAvatar}>
-                      <img src={mentorImage} alt={mentor?.name ?? "Mentor"} />
+                      <SmartImage src={mentorImage} alt={mentor?.name ?? "Mentor"} width={96} height={96} />
                     </div>
                     <div className={styles.mentorName}>
                       {mentor ? mentorDisplayName(mentor, locale) : ""}
@@ -176,9 +177,11 @@ export default function CourseDetailClient({ course: baseCourse }: { course: Cou
                   {otherMentors.map((m) => (
                     <div className={styles.mentorCard} key={m.id}>
                       <div className={styles.mentorAvatar}>
-                        <img
+                        <SmartImage
                           src={m.profilePicture || "/images/mentor1.png"}
                           alt={m.name}
+                          width={96}
+                          height={96}
                         />
                       </div>
                       <div className={styles.mentorName}>

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import Counter from "@/components/Counter";
+import SmartImage from "@/components/SmartImage";
 import CourseBanner from "@/components/CourseBanner";
 import Reveal from "@/components/Reveal";
 import Faq from "@/components/Faq";
@@ -104,9 +105,13 @@ export default function Home() {
 
             <div className={styles.heroVisual}>
               <div className={styles.heroFrame}>
-                <img
+                {/* The hero image is the largest thing above the fold. */}
+                <SmartImage
                   src="/images/online-learning.svg"
                   alt="Online learning illustration"
+                  width={620}
+                  height={480}
+                  priority
                 />
               </div>
             </div>
@@ -155,7 +160,7 @@ export default function Home() {
             {features.map((f, i) => (
               <Reveal key={i} className={styles.featureCard} delay={i * 80} style={cssVars(accentByIndex(i))}>
                 <div className={styles.featureIcon}>
-                  <img src={f.icon} alt="" />
+                  <SmartImage src={f.icon} alt="" width={56} height={56} />
                 </div>
                 <h3>{f.title}</h3>
                 <p>{f.text}</p>
@@ -223,7 +228,9 @@ export default function Home() {
                   <div className={styles.courseBody}>
                     <h3>{course.subject}</h3>
                     <div className={styles.courseMentor}>
-                      {mentor && <img src={mentor.profilePicture} alt={mentor.name} />}
+                      {mentor && (
+                        <SmartImage src={mentor.profilePicture} alt={mentor.name} width={40} height={40} />
+                      )}
                       {t("courses.by")} {mentorName(course.mentorId)}
                     </div>
                     <div className={styles.courseMeta}>
@@ -270,7 +277,7 @@ export default function Home() {
               <Reveal key={m.id} className={styles.mentorCard} delay={i * 70}>
                 <Link href={`/mentors/${m.id}`}>
                   <div className={styles.mentorAvatar}>
-                    <img src={m.profilePicture} alt={m.name} />
+                    <SmartImage src={m.profilePicture} alt={m.name} width={110} height={110} />
                   </div>
                   <h4>{m.name}</h4>
                   <span>{m.major}</span>

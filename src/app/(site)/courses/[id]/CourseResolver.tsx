@@ -6,6 +6,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { effectiveCourse, EffectiveCourse } from "@/lib/catalog";
+import PageLoader from "@/components/PageLoader";
 import CourseDetailClient from "./CourseDetailClient";
 
 export default function CourseResolver({ id }: { id: number }) {
@@ -22,6 +23,6 @@ export default function CourseResolver({ id }: { id: number }) {
     if (course === null) router.replace("/courses");
   }, [course, router]);
 
-  if (!course) return null;
+  if (!course) return <PageLoader />;
   return <CourseDetailClient course={course} />;
 }

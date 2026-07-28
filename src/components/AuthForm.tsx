@@ -4,6 +4,7 @@ import {createClient} from "@/lib/supabase/client";
 
 import { useState, useEffect, FormEvent } from "react";
 import Link from "next/link";
+import SmartImage from "@/components/SmartImage";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/i18n/I18nProvider";
 import { login } from "@/lib/auth";
@@ -257,9 +258,12 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
         <div className={styles.authGrid}>
           {/* Illustration — different image per mode */}
           <div className={styles.illustration}>
-            <img
+            <SmartImage
               src={isRegister ? "/images/auth-register.svg" : "/images/auth-login.svg"}
               alt=""
+              width={520}
+              height={420}
+              priority
             />
           </div>
 
@@ -576,13 +580,13 @@ export default function AuthForm({ mode }: { mode: "login" | "register" }) {
                   <label className={styles.checkboxContainer}>
                     <input type="checkbox" name="terms" />
                     {t("auth.agreePre")}{" "}
-                    <a href="#" className={styles.termsLink}>
+                    <Link href="/terms" className={styles.termsLink} target="_blank">
                       {t("auth.terms")}
-                    </a>{" "}
+                    </Link>{" "}
                     {t("auth.and")}{" "}
-                    <a href="#" className={styles.termsLink}>
+                    <Link href="/privacy" className={styles.termsLink} target="_blank">
                       {t("auth.privacy")}
-                    </a>
+                    </Link>
                   </label>
                   <div className={styles.errorMessage}>{t("auth.errTerms")}</div>
                 </div>

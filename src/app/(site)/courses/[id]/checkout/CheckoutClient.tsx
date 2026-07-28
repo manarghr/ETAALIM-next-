@@ -59,7 +59,16 @@ export default function CheckoutClient({
     setSubmitting(false);
 
     if (rpcError) {
-      setError(rpcError.message);
+      // Never show the raw message: it's a Postgres error that names tables and
+      // constraints, in English, to a user who wants to know what to DO.
+      const m = rpcError.message.toLowerCase();
+      if (m.includes("balance") || m.includes("insufficient") || m.includes("fund"))
+        setError(t("checkout.errBalance"));
+      else if (m.includes("already") || m.includes("duplicate"))
+        setError(t("checkout.errAlready"));
+      else if (m.includes("auth") || m.includes("logged") || m.includes("jwt"))
+        setError(t("checkout.errAuth"));
+      else setError(t("checkout.errGeneric"));
       return;
     }
      addEnrollment({

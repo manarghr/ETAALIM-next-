@@ -26,11 +26,17 @@ const VALID: Locale[] = ["en", "fr", "ar"];
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>("en");
 
-  // Restore saved language on first mount.
+  // Restore the saved language on first mount. This has to be an effect, not
+  // lazy initial state: localStorage doesn't exist during server rendering, and
+  // reading it while rendering would make the server and client disagree.
+  // Reading an external store is exactly what the rule's docs allow an effect
+  // to do, so the one-off render it costs is intended.
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const saved = localStorage.getItem("lang") as Locale | null;
     if (saved && VALID.includes(saved)) setLocaleState(saved);
   }, []);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const dir: "ltr" | "rtl" = locale === "ar" ? "rtl" : "ltr";
 

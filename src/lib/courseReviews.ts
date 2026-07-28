@@ -28,6 +28,30 @@ export async function getCourseReviews(courseId: number): Promise<CourseReview[]
   }));
 }
 
+// Every review on the platform, grouped by course id, newest first — one query
+// for the admin overview (which needs counts and averages across all courses at
+// once, so asking course by course would be dozens of round-trips).
+export async function getAllReviews(): Promise<Record<number, CourseReview[]>> {
+  const supabase = createClient();
+  const { data } = await supabase
+    .from("reviews")
+    .select("id, course_id, author_name, rating, text, created_at")
+    .order("created_at", { ascending: false });
+
+  const byCourse: Record<number, CourseReview[]> = {};
+  for (const r of data ?? []) {
+    const list = (byCourse[r.course_id as number] ??= []);
+    list.push({
+      id: r.id,
+      author: r.author_name,
+      rating: r.rating,
+      text: r.text ?? "",
+      date: r.created_at,
+    });
+  }
+  return byCourse;
+}
+
 /** A mentor's real aggregate rating, across reviews of all their courses. */
 export interface MentorRating {
   avg: number; // 0 when no reviews

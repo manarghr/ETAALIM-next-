@@ -5,6 +5,7 @@
 // /reset-password once that link has signed them in.
 import { useState, FormEvent } from "react";
 import Link from "next/link";
+import SmartImage from "@/components/SmartImage";
 import { useI18n } from "@/i18n/I18nProvider";
 import { createClient } from "@/lib/supabase/client";
 import s from "@/components/AuthForm.module.css";
@@ -49,7 +50,7 @@ export default function ForgotPasswordClient() {
       <div className="container">
         <div className={s.authGrid}>
           <div className={s.illustration}>
-            <img src="/images/auth-login.svg" alt="" />
+            <SmartImage src="/images/auth-login.svg" alt="" width={520} height={420} priority />
           </div>
 
           <div className={s.card}>

@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getJoinOption, JoinMode } from "@/data/courses";
 import { effectiveCourse, EffectiveCourse } from "@/lib/catalog";
+import PageLoader from "@/components/PageLoader";
 import CheckoutClient from "./CheckoutClient";
 
 export default function CheckoutResolver({ id, mode }: { id: number; mode: JoinMode }) {
@@ -21,6 +22,6 @@ export default function CheckoutResolver({ id, mode }: { id: number; mode: JoinM
     if (course === null) router.replace("/courses");
   }, [course, router]);
 
-  if (!course) return null;
+  if (!course) return <PageLoader />;
   return <CheckoutClient course={course} option={getJoinOption(course, mode)} />;
 }

@@ -1,0 +1,40 @@
+.wrap {
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  background: #f7f8fc;
+}
+
+.spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid #ddd9f3;
+  border-top-color: #534ab7;
+  animation: spin 0.75s linear infinite;
+}
+
+.label {
+  color: #6b7280;
+  font-size: 14px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Respect people who've asked for less motion: fade instead of spin. */
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: pulse 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+  }
+}

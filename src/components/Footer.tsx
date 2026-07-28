@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import SmartImage from "./SmartImage";
 import { useI18n } from "@/i18n/I18nProvider";
 import styles from "./Footer.module.css";
 
@@ -12,7 +14,7 @@ export default function Footer() {
           <div className={styles.footerLogo}>
             <div className={styles.footerBrand}>
               <span className={styles.footerLogoChip}>
-                <img src="/images/logo.png" alt="E-Taalim" />
+                <SmartImage src="/images/logo.png" alt="E-Taalim" width={56} height={56} />
               </span>
               <span className={styles.footerWordmark}>
                 <span className={styles.footerWordmarkAccent}>E-</span>Taalim
@@ -25,22 +27,25 @@ export default function Footer() {
                 {t("footer.tagline2b")}
               </p>
             </div>
-            <div className={styles.socialIcons}>
-              <a href="#" aria-label="Facebook">
+            {/* Decorative only — E-Taalim has no social accounts, so these are
+                spans rather than links that would go nowhere. `aria-hidden`
+                keeps a screen reader from announcing five useless icons. */}
+            <div className={styles.socialIcons} aria-hidden="true">
+              <span>
                 <i className="fa fa-facebook"></i>
-              </a>
-              <a href="#" aria-label="Twitter">
+              </span>
+              <span>
                 <i className="fa fa-twitter"></i>
-              </a>
-              <a href="#" aria-label="Instagram">
+              </span>
+              <span>
                 <i className="fa fa-instagram"></i>
-              </a>
-              <a href="#" aria-label="LinkedIn">
+              </span>
+              <span>
                 <i className="fa fa-linkedin"></i>
-              </a>
-              <a href="#" aria-label="YouTube">
+              </span>
+              <span>
                 <i className="fa fa-youtube-play"></i>
-              </a>
+              </span>
             </div>
           </div>
 
@@ -72,8 +77,8 @@ export default function Footer() {
         <div className={styles.footerBottom}>
           <p>Copyright © 2025 E-Taalim</p>
           <p>
-            {t("footer.rights")} | <a href="#">{t("footer.terms")}</a> |{" "}
-            <a href="#">{t("footer.privacy")}</a>
+            {t("footer.rights")} | <Link href="/terms">{t("footer.terms")}</Link> |{" "}
+            <Link href="/privacy">{t("footer.privacy")}</Link>
           </p>
         </div>
       </div>
