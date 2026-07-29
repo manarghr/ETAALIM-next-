@@ -8,8 +8,7 @@ from a back-office.
 
 The site is trilingual: English, French and Arabic.
 
-This is the Next.js rewrite of the original PHP version, which lives in the
-parent folder of this repository.
+
 
 ## Why it's built this way
 
