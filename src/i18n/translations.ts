@@ -536,6 +536,7 @@ export const translations = {
     },
     mentorForm: {
       badge: "Become a mentor",
+      howTitle: "How it works", step1: "Create your mentor account with this form.", step2: "Finish your profile and the years you teach from your dashboard.", step3: "Publish your courses and set your own rates.",
       title: "Teach on E-Taalim",
       subtitle: "Share your expertise with students across Algeria, build your own courses, sessions, and rates.",
       successMsg: "Application submitted! We'll review your profile and get back to you by email.",
@@ -1168,6 +1169,7 @@ export const translations = {
     },
     mentorForm: {
       badge: "Devenir mentor",
+      howTitle: "Comment ça marche", step1: "Créez votre compte mentor avec ce formulaire.", step2: "Complétez votre profil et vos années d'enseignement depuis votre tableau de bord.", step3: "Publiez vos cours et fixez vos propres tarifs.",
       title: "Enseignez sur E-Taalim",
       subtitle: "Partagez votre expertise avec les étudiants de toute l'Algérie, créez vos cours, séances et tarifs.",
       successMsg: "Candidature envoyée ! Nous étudierons votre profil et vous répondrons par e-mail.",
@@ -1795,6 +1797,7 @@ export const translations = {
     },
     mentorForm: {
       badge: "كن مُدرّبًا",
+      howTitle: "كيف يعمل", step1: "أنشئ حسابك كمدرّب عبر هذا النموذج.", step2: "أكمل ملفك والسنوات التي تدرّسها من لوحة التحكم.", step3: "انشر دوراتك وحدّد أسعارك بنفسك.",
       title: "درّس على E-Taalim",
       subtitle: "شارك خبرتك مع الطلاب في جميع أنحاء الجزائر، أنشئ دوراتك وحصصك وحدّد أسعارك.",
       successMsg: "تم إرسال طلبك! سنراجع ملفك ونتواصل معك عبر البريد الإلكتروني.",

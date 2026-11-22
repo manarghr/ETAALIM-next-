@@ -159,23 +159,32 @@ export default function MentorForm() {
   };
 
   return (
-    <div className={s.authPage}>
+    <div className={`${s.authPage} ${m.page}`}>
       <div className="container">
-        <div className={s.authGrid}>
-          {/* Illustration */}
-          <div className={s.illustration}>
-            <SmartImage src="/images/mentor-illustration.svg" alt="" width={520} height={420} priority />
-          </div>
-
-          {/* Card */}
-          <div className={`${s.card} ${m.card}`}>
-            <div className={s.head}>
-              <span className={m.badge}>
-                <i className="fa fa-graduation-cap"></i> {t("mentorForm.badge")}
-              </span>
+        <div className={m.layout}>
+          {/* Intro panel: the illustration, the pitch and what happens next.
+              Shares the artwork's lilac so picture and page read as one. */}
+          <aside className={m.intro}>
+            <div className={m.introArt}>
+              <SmartImage src="/images/mentor-illustration.svg" alt="" width={520} height={420} priority />
+            </div>
+            <div className={m.introText}>
+              <span className={m.kicker}>{t("mentorForm.badge")}</span>
               <h1>{t("mentorForm.title")}</h1>
               <p>{t("mentorForm.subtitle")}</p>
             </div>
+            <div className={m.steps}>
+              <h2>{t("mentorForm.howTitle")}</h2>
+              <ol>
+                <li>{t("mentorForm.step1")}</li>
+                <li>{t("mentorForm.step2")}</li>
+                <li>{t("mentorForm.step3")}</li>
+              </ol>
+            </div>
+          </aside>
+
+          {/* Card */}
+          <div className={`${s.card} ${m.card}`}>
 
             {formError && (
               <div className={s.alert}>
