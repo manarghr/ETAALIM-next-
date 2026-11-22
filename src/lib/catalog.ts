@@ -1,6 +1,6 @@
 // The effective course catalog — now read from the Supabase `courses` table.
 import { createClient } from "@/lib/supabase/client";
-import { Course, Tier, TIERS } from "@/data/courses";
+import { Course, Tier, TIERS, courses as seedCourses } from "@/data/courses";
 
 export interface EffectiveCourse extends Course {
   description?: string;
@@ -35,20 +35,36 @@ function rowToCourse(r: Record<string, unknown>): EffectiveCourse {
   };
 }
 
+// The built-in demo catalog, used when the database is unreachable or empty
+// (e.g. a paused Supabase project) so the site never shows "0 courses".
+function seedCatalog(): EffectiveCourse[] {
+  return seedCourses.map((c) => ({ ...c, mentorIds: [c.mentorId] }));
+}
+
 export async function effectiveCourses(): Promise<EffectiveCourse[]> {
-  const supabase = createClient();
-  const { data } = await supabase.from("courses").select("*").order("id");
-  return (data ?? []).map(rowToCourse);
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase.from("courses").select("*").order("id");
+    if (error || !data || data.length === 0) return seedCatalog();
+    return data.map(rowToCourse);
+  } catch {
+    return seedCatalog();
+  }
 }
 
 export async function effectiveCourse(
   id: number
 ): Promise<EffectiveCourse | undefined> {
-  const supabase = createClient();
-  const { data } = await supabase
-    .from("courses")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle();
-  return data ? rowToCourse(data) : undefined;
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from("courses")
+      .select("*")
+      .eq("id", id)
+      .maybeSingle();
+    if (data && !error) return rowToCourse(data);
+  } catch {
+    // database unreachable, fall through to the demo catalog
+  }
+  return seedCatalog().find((c) => c.id === id);
 }

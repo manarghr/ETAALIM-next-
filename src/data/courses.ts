@@ -247,8 +247,29 @@ const MENTOR_BY_MAJOR: Record<string, number> = {
   Arabic: 9,
 };
 
-const DATES = ["2025-09-15", "2025-09-22", "2025-10-01", "2025-10-08", "2025-10-15", "2025-10-22"];
+const DATES = ["2026-12-05", "2026-12-12", "2026-12-19", "2027-01-09", "2027-01-16", "2027-01-23"];
 const TIMES = ["09:00", "10:30", "14:00", "16:00", "11:00"];
+
+// Close subjects, used when no teacher in the cycle has the exact major.
+const MAJOR_ALIASES: Record<string, string[]> = {
+  "Natural Sciences": ["Biology"],
+  "Foreign Languages": ["English", "French"],
+  French: ["English"],
+  Technology: ["Physics"],
+  Accounting: ["Economics"],
+  Philosophy: ["History"],
+  Arabic: ["History"],
+};
+
+/** A teacher from the SAME cycle as the course (mentors teach one cycle only). */
+function mentorFor(tier: Tier, major: string): number {
+  const inCycle = mentors.filter((m) => m.teaching.some((t) => t.tier === tier));
+  for (const want of [major, ...(MAJOR_ALIASES[major] ?? [])]) {
+    const hits = inCycle.filter((m) => m.major === want);
+    if (hits.length) return hits[_id % hits.length].id;
+  }
+  return inCycle[0]?.id ?? MENTOR_BY_MAJOR[major] ?? 1;
+}
 
 let _id = 0;
 function mk(subject: string, tier: Tier, track: string, year: number, major: string): Course {
@@ -268,7 +289,7 @@ function mk(subject: string, tier: Tier, track: string, year: number, major: str
     price,
     priceGroup,
     priceIndividual,
-    mentorId: MENTOR_BY_MAJOR[major] ?? 1,
+    mentorId: mentorFor(tier, major),
   };
 }
 
@@ -368,6 +389,14 @@ export const courses: Course[] = [
   mk("Computer Science", "University", "uni_mas", 4, "Computer Science"),
   mk("Mathematics", "University", "uni_mas", 4, "Mathematics"),
   mk("Computer Science", "University", "uni_doc", 6, "Computer Science"),
+
+  // Added after the original list so existing course ids stay the same.
+  mk("Physics", "University", "uni_lic", 1, "Physics"),
+  mk("English", "University", "uni_lic", 1, "English"),
+  mk("English", "University", "uni_mas", 4, "English"),
+  mk("History & Geography", "Primary", "p4", 4, "History"),
+  mk("History & Geography", "Primary", "p5", 5, "History"),
+  mk("English", "Primary", "p5", 5, "English"),
 ];
 
 export function mentorName(mentorId: number): string {
