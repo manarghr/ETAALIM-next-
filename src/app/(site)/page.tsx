@@ -148,7 +148,6 @@ export default function Home() {
         <div className="container">
           <div className={styles.featuresFrame}>
           <Reveal className={styles.sectionHead}>
-            <span className={styles.eyebrow}>{t("features.eyebrow")}</span>
             <h2 className={styles.sectionTitle}>
               {t("features.title1")}{" "}
               <span className={styles.accent}>{t("features.title2")}</span>
@@ -175,7 +174,6 @@ export default function Home() {
       <section className={`${styles.section} ${styles.subjects}`}>
         <div className="container">
           <Reveal className={styles.sectionHead}>
-            <span className={styles.eyebrow}>{t("subjects.eyebrow")}</span>
             <h2 className={styles.sectionTitle}>
               {t("subjects.title1")}{" "}
               <span className={styles.accent}>{t("subjects.title2")}</span>
@@ -205,7 +203,6 @@ export default function Home() {
       <section className={`${styles.section} ${styles.courses}`}>
         <div className="container">
           <Reveal className={styles.sectionHead}>
-            <span className={styles.eyebrow}>{t("courses.eyebrow")}</span>
             <h2 className={styles.sectionTitle}>
               {t("courses.title1")}{" "}
               <span className={styles.accent}>{t("courses.title2")}</span>
@@ -264,7 +261,6 @@ export default function Home() {
       <section className={`${styles.section} ${styles.mentors}`}>
         <div className="container">
           <Reveal className={styles.sectionHead}>
-            <span className={styles.eyebrow}>{t("mentorsSec.eyebrow")}</span>
             <h2 className={styles.sectionTitle}>
               {t("mentorsSec.title1")}{" "}
               <span className={styles.accent}>{t("mentorsSec.title2")}</span>
@@ -298,7 +294,6 @@ export default function Home() {
       <section className={`${styles.section} ${styles.testimonials}`}>
         <div className="container">
           <Reveal className={styles.sectionHead}>
-            <span className={styles.eyebrow}>{t("testimonials.eyebrow")}</span>
             <h2 className={styles.sectionTitle}>
               {t("testimonials.title1")}{" "}
               <span className={styles.accent}>{t("testimonials.title2")}</span>
@@ -360,7 +355,6 @@ export default function Home() {
       <section className={`${styles.section} ${styles.faq}`}>
         <div className="container">
           <Reveal className={styles.sectionHead}>
-            <span className={styles.eyebrow}>{t("faq.eyebrow")}</span>
             <h2 className={styles.sectionTitle}>
               {t("faq.title1")}{" "}
               <span className={styles.accent}>{t("faq.title2")}</span>
