@@ -1045,30 +1045,316 @@
   }
 }
 
+/* ============ Phone layout ============
+   Not just "stack everything": the hero tightens up, stats become a
+   ruled 2x2 scoreboard, features turn into compact icon rows, and the
+   long card lists (courses, mentors, reviews) become swipeable rails
+   that peek the next card so the page stays short. */
 @media (max-width: 680px) {
   .section {
-    padding: 72px 0;
+    padding: 56px 0;
   }
-  .featuresFrame {
-    padding: 44px 22px;
-    border-radius: 24px;
+
+  .sectionHead {
+    text-align: start;
+    margin: 0 0 28px;
   }
-  .featureGrid,
-  .courseGrid,
-  .testimonialGrid,
-  .stepsGrid,
-  .mentorRow {
-    grid-template-columns: 1fr;
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+    padding: 5px 11px;
+    margin-bottom: 12px;
   }
-  .statItem::after {
-    display: none !important;
+  .sectionTitle {
+    font-size: 1.65rem;
+    letter-spacing: -0.3px;
   }
-  .floatCard {
-    display: none;
+  .sectionSubtitle {
+    margin-top: 10px;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  /* --- Hero --- */
+  .hero {
+    padding: 28px 0 36px;
+  }
+  .heroGrid {
+    gap: 8px;
+  }
+  .heroBadge {
+    font-size: 12px;
+    padding: 6px 12px;
+    margin-bottom: 20px;
+  }
+  .heroTitle {
+    font-size: clamp(2.1rem, 9.6vw, 2.7rem);
+    letter-spacing: -1px;
+  }
+  .heroSubtitle {
+    margin: 16px 0 26px;
+    font-size: 16px;
+    line-height: 1.65;
   }
   .heroCtas {
     flex-direction: column;
     align-items: stretch;
+    gap: 10px;
+  }
+  .heroCtas .btnPrimary,
+  .heroCtas .btnGhost {
+    justify-content: center;
+    padding: 15px 20px;
+    font-size: 16px;
+    border-radius: 14px;
+  }
+  .heroCtas .btnGhost {
+    padding: 13px 20px;
+  }
+  .heroTrust {
+    margin-top: 22px;
+    gap: 12px;
+  }
+  .avatars span {
+    width: 34px;
+    height: 34px;
+    margin-left: -10px;
+  }
+  .heroTrust .trustText {
+    font-size: 13px;
+  }
+  .heroVisual {
+    max-width: 340px;
+    margin: 0 auto;
+  }
+
+  /* --- Stats: ruled 2x2 scoreboard --- */
+  .statsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0;
+    padding: 0;
+  }
+  .statItem {
+    text-align: start;
+    padding: 22px 4px 22px 18px;
+  }
+  .statItem::after {
+    display: none !important;
+  }
+  .statItem:nth-child(odd) {
+    border-inline-end: 1px solid var(--line);
+    padding-inline-start: 0;
+  }
+  .statItem:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--line);
+  }
+  .statNumber {
+    font-size: 1.9rem;
+  }
+  .statText {
+    margin-top: 6px;
+    font-size: 13px;
+  }
+
+  /* --- Features: compact icon rows --- */
+  .featuresFrame {
+    padding: 30px 16px 18px;
+    border-radius: 22px;
+  }
+  .featuresFrame .sectionHead {
+    padding: 0 4px;
+  }
+  .featureGrid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .featureCard {
+    display: grid;
+    grid-template-columns: 46px 1fr;
+    column-gap: 14px;
+    align-items: start;
+    padding: 16px;
+    border-radius: 16px;
+  }
+  .featureCard:hover {
+    transform: none;
+  }
+  .featureIcon {
+    grid-row: span 2;
+    width: 46px;
+    height: 46px;
+    border-radius: 13px;
+    margin: 0;
+  }
+  .featureIcon img {
+    width: 24px;
+    height: 24px;
+  }
+  .featureCard h3 {
+    font-size: 16px;
+    margin: 2px 0 4px;
+  }
+  .featureCard p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+
+  /* --- Subjects: two columns of compact pills --- */
+  .subjectsGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .subjectTile {
+    flex-direction: row;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 14px;
+    text-align: start;
+  }
+  .subjectIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 11px;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .subjectName {
+    font-size: 14px;
+    line-height: 1.25;
+  }
+
+  /* --- Swipe rails: courses, mentors, reviews --- */
+  .courseGrid,
+  .mentorRow,
+  .testimonialGrid {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 20px;
+    margin-inline: -20px;
+    padding: 4px 20px 18px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  .courseGrid::-webkit-scrollbar,
+  .mentorRow::-webkit-scrollbar,
+  .testimonialGrid::-webkit-scrollbar {
+    display: none;
+  }
+  /* cards off to the side should not wait for a scroll-reveal */
+  .courseGrid > :global(.reveal),
+  .mentorRow > :global(.reveal),
+  .testimonialGrid > :global(.reveal) {
+    opacity: 1;
+    transform: none;
+    scroll-snap-align: start;
+    flex-shrink: 0;
+  }
+
+  .courseCard {
+    width: 78%;
+    max-width: 300px;
+  }
+  .courseCard:hover,
+  .mentorCard:hover,
+  .testimonialCard:hover {
+    transform: none;
+  }
+  .courseThumb {
+    height: 148px;
+  }
+  .courseBody {
+    padding: 16px;
+    gap: 10px;
+  }
+  .courseBody h3 {
+    font-size: 17px;
+  }
+
+  .mentorCard {
+    width: 136px;
+    padding: 18px 10px;
+    border-radius: 18px;
+  }
+  .mentorAvatar {
+    width: 72px;
+    height: 72px;
+    margin-bottom: 12px;
+  }
+  .mentorCard h4 {
+    font-size: 14px;
+    line-height: 1.3;
+  }
+  .mentorCard span {
+    font-size: 12px;
+  }
+
+  .testimonialCard {
+    width: 86%;
+    max-width: 340px;
+    padding: 24px 20px 20px;
+  }
+  .testimonialText {
+    font-size: 14.5px;
+    line-height: 1.65;
+    margin-bottom: 18px;
+  }
+  .testimonialAuthor {
+    flex-wrap: wrap;
+  }
+
+  .sectionCta {
+    margin-top: 20px;
+  }
+
+  /* --- Mentor CTA band --- */
+  .ctaBand {
+    padding: 8px 0 56px;
+  }
+  .ctaInner {
+    padding: 32px 22px;
+    border-radius: 22px;
+    gap: 24px;
+  }
+  .ctaInner h2 {
+    font-size: 1.55rem;
+  }
+  .ctaInner p {
+    font-size: 15px;
+    margin-top: 10px;
+  }
+  .ctaActions {
+    align-items: stretch;
+  }
+  .ctaBenefits div {
+    font-size: 14px;
+  }
+
+  /* --- FAQ --- */
+  .faqItem {
+    margin-bottom: 10px;
+    border-radius: 14px;
+  }
+  .faqQuestion {
+    padding: 16px 16px;
+    gap: 12px;
+  }
+  .faqQuestion h3 {
+    font-size: 15.5px;
+    line-height: 1.4;
+  }
+  .faqToggle {
+    width: 30px;
+    height: 30px;
+  }
+  .faqAnswer,
+  .faqItemActive .faqAnswer {
+    padding-inline: 16px;
+  }
+
+  .floatCard {
+    display: none;
   }
   .btnPrimary,
   .btnGhost {
